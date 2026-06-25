@@ -111,8 +111,8 @@ export const ORDERS_QUERY = `
           id
           name
           createdAt
-          financialStatus
-          fulfillmentStatus
+          financialStatus: displayFinancialStatus
+          fulfillmentStatus: displayFulfillmentStatus
           totalPriceSet {
             shopMoney {
               amount
@@ -149,8 +149,8 @@ export const DASHBOARD_QUERY = `
           id
           name
           createdAt
-          financialStatus
-          fulfillmentStatus
+          financialStatus: displayFinancialStatus
+          fulfillmentStatus: displayFulfillmentStatus
           totalPriceSet {
             shopMoney {
               amount
