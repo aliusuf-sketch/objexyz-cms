@@ -1,11 +1,7 @@
 import { NextResponse } from 'next/server';
-
-const SHOPIFY_STORE_DOMAIN = process.env.SHOPIFY_STORE_DOMAIN!;
-const SHOPIFY_ADMIN_API_TOKEN = process.env.SHOPIFY_ADMIN_API_TOKEN!;
-const SHOPIFY_API_VERSION = process.env.SHOPIFY_API_VERSION || '2024-10';
+import { shopifyFetch } from '@/lib/shopify';
 
 async function runShopifyQL(query: string) {
-  const endpoint = `https://${SHOPIFY_STORE_DOMAIN}/admin/api/${SHOPIFY_API_VERSION}/graphql.json`;
   const gql = `
     query {
       shopifyqlQuery(query: "${query.replace(/"/g, '\\"')}") {
@@ -19,16 +15,7 @@ async function runShopifyQL(query: string) {
       }
     }
   `;
-  const res = await fetch(endpoint, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-Shopify-Access-Token': SHOPIFY_ADMIN_API_TOKEN,
-    },
-    body: JSON.stringify({ query: gql }),
-    cache: 'no-store',
-  });
-  return res.json();
+  return shopifyFetch(gql);
 }
 
 export async function GET() {
