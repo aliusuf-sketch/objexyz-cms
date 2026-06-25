@@ -89,13 +89,14 @@ export const PRODUCTS_QUERY = `
               }
             }
           }
-          metafields(identifiers: [
-            {namespace: "custom", key: "eta"},
-            {namespace: "custom", key: "eta_note"}
-          ]) {
-            namespace
-            key
-            value
+          metafields(namespace: "custom", first: 20) {
+            edges {
+              node {
+                namespace
+                key
+                value
+              }
+            }
           }
         }
       }
