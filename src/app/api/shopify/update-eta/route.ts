@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { shopifyFetch } from '@/lib/shopify';
 
-const UPDATE_METAFIELD = `
-  mutation UpdateProductMetafields($input: ProductInput!) {
-    productUpdate(input: $input) {
-      product { id }
+const SET_METAFIELDS = `
+  mutation SetMetafields($metafields: [MetafieldsSetInput!]!) {
+    metafieldsSet(metafields: $metafields) {
+      metafields { id key value }
       userErrors { field message }
     }
   }
@@ -12,17 +12,24 @@ const UPDATE_METAFIELD = `
 
 export async function POST(request: NextRequest) {
   try {
-    const { productId, eta, etaNote } = await request.json();
+    // ownerId may be a product or a variant GID. (productId kept for back-compat.)
+    const body = await request.json();
+    const ownerId: string | undefined = body.ownerId || body.productId || body.variantId;
+    const { eta, etaNote } = body;
+
+    if (!ownerId) {
+      return NextResponse.json({ error: 'ownerId is required' }, { status: 400 });
+    }
+
     const metafields = [];
     if (eta !== undefined) {
-      metafields.push({ namespace: 'custom', key: 'eta', value: eta, type: 'single_line_text_field' });
+      metafields.push({ ownerId, namespace: 'custom', key: 'eta', value: eta, type: 'single_line_text_field' });
     }
     if (etaNote !== undefined) {
-      metafields.push({ namespace: 'custom', key: 'eta_note', value: etaNote, type: 'single_line_text_field' });
+      metafields.push({ ownerId, namespace: 'custom', key: 'eta_note', value: etaNote, type: 'single_line_text_field' });
     }
-    const data = await shopifyFetch(UPDATE_METAFIELD, {
-      input: { id: productId, metafields },
-    });
+
+    const data = await shopifyFetch(SET_METAFIELDS, { metafields });
     return NextResponse.json(data);
   } catch (err) {
     return NextResponse.json({ error: String(err) }, { status: 500 });

@@ -2,7 +2,8 @@
 import { useEffect, useState } from 'react';
 import { formatPKR } from '@/lib/utils';
 
-interface Variant { id: string; title: string; price: string; }
+interface Metafield { namespace: string; key: string; value: string }
+interface Variant { id: string; title: string; price: string; metafields: Metafield[]; }
 interface Product {
   id: string;
   title: string;
@@ -10,7 +11,7 @@ interface Product {
   productType: string;
   tags: string[];
   variants: { edges: { node: Variant }[] };
-  metafields: { namespace: string; key: string; value: string }[];
+  metafields: Metafield[];
 }
 
 export default function ProductsPage() {
@@ -53,8 +54,14 @@ export default function ProductsPage() {
     return v ? formatPKR(v.node.price) : '—';
   }
 
-  function getMetafield(product: Product, key: string) {
-    return product.metafields?.find(m => m.key === key)?.value || '—';
+  function getVariantEta(product: Product) {
+    const parts = (product.variants?.edges || [])
+      .map(e => {
+        const eta = e.node.metafields?.find(m => m.key === 'eta')?.value;
+        return eta ? `${e.node.title}: ${eta}` : null;
+      })
+      .filter(Boolean);
+    return parts.length ? parts.join(' · ') : '—';
   }
 
   return (
@@ -97,7 +104,7 @@ export default function ProductsPage() {
                     <td className="px-5 py-3 font-mono" style={{ color: 'var(--muted)' }}>{getVariantPrice(product, '8in')}</td>
                     <td className="px-5 py-3 font-mono" style={{ color: 'var(--muted)' }}>{getVariantPrice(product, '16in')}</td>
                     <td className="px-5 py-3 font-mono" style={{ color: 'var(--muted)' }}>{getVariantPrice(product, 'custom')}</td>
-                    <td className="px-5 py-3" style={{ color: 'var(--muted)' }}>{getMetafield(product, 'eta')}</td>
+                    <td className="px-5 py-3" style={{ color: 'var(--muted)' }}>{getVariantEta(product)}</td>
                     <td className="px-5 py-3">
                       <button
                         onClick={() => toggleStatus(product)}

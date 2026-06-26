@@ -86,6 +86,15 @@ export const PRODUCTS_QUERY = `
                 id
                 title
                 price
+                metafields(namespace: "custom", first: 10) {
+                  edges {
+                    node {
+                      namespace
+                      key
+                      value
+                    }
+                  }
+                }
               }
             }
           }

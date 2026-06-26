@@ -13,6 +13,16 @@ export async function GET() {
         if (Array.isArray(mfEdges)) {
           edge.node.metafields = mfEdges.map((e: { node: unknown }) => e.node);
         }
+        // Flatten each variant's metafields too.
+        const vEdges = edge?.node?.variants?.edges;
+        if (Array.isArray(vEdges)) {
+          for (const v of vEdges) {
+            const vmf = v?.node?.metafields?.edges;
+            if (Array.isArray(vmf)) {
+              v.node.metafields = vmf.map((e: { node: unknown }) => e.node);
+            }
+          }
+        }
       }
     }
     return NextResponse.json(data);
