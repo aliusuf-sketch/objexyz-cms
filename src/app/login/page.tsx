@@ -55,7 +55,7 @@ export default function LoginPage() {
             type="submit"
             disabled={loading}
             className="w-full py-2 rounded text-sm font-medium tracking-widest uppercase transition-colors"
-            style={{ background: 'var(--accent)', color: 'white' }}
+            style={{ background: 'var(--accent)', color: 'var(--accent-fg)' }}
           >
             {loading ? 'AUTHENTICATING...' : 'ENTER'}
           </button>

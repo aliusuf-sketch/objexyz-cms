@@ -161,7 +161,7 @@ export default function NewProductPage() {
             type="submit"
             disabled={submitting}
             className="w-full py-2.5 rounded text-sm font-medium tracking-widest uppercase transition-colors"
-            style={{ background: 'var(--accent)', color: 'white' }}
+            style={{ background: 'var(--accent)', color: 'var(--accent-fg)' }}
           >
             {submitting ? 'CREATING...' : 'CREATE PRODUCT'}
           </button>
