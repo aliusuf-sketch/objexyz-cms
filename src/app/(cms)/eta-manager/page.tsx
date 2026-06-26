@@ -66,30 +66,30 @@ export default function ETAManagerPage() {
   return (
     <div>
       <div className="mb-8">
-        <h1 className="text-xl font-bold tracking-widest uppercase text-white">ETA MANAGER</h1>
-        <p className="text-xs mt-1 tracking-widest" style={{ color: '#555' }}>MANAGE PRODUCT ETA METAFIELDS</p>
+        <h1 className="text-xl font-bold tracking-widest uppercase txt-heading">ETA MANAGER</h1>
+        <p className="text-xs mt-1 tracking-widest" style={{ color: 'var(--muted-2)' }}>MANAGE PRODUCT ETA METAFIELDS</p>
       </div>
 
       {loading ? (
-        <div className="text-xs tracking-widest" style={{ color: '#555' }}>LOADING PRODUCT DATA...</div>
+        <div className="text-xs tracking-widest" style={{ color: 'var(--muted-2)' }}>LOADING PRODUCT DATA...</div>
       ) : (
-        <div className="rounded-lg overflow-hidden" style={{ background: '#1a1a1a', border: '1px solid #2a2a2a' }}>
+        <div className="rounded-lg overflow-hidden" style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
           <table className="w-full text-xs">
             <thead>
-              <tr style={{ borderBottom: '1px solid #2a2a2a' }}>
+              <tr style={{ borderBottom: '1px solid var(--border)' }}>
                 {['PRODUCT', 'STATUS', 'ETA', 'ETA NOTE', 'SAVE'].map(h => (
-                  <th key={h} className="text-left px-5 py-3 tracking-widest" style={{ color: '#555' }}>{h}</th>
+                  <th key={h} className="text-left px-5 py-3 tracking-widest" style={{ color: 'var(--muted-2)' }}>{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {rows.map(row => (
-                <tr key={row.id} style={{ borderBottom: '1px solid #1f1f1f' }}>
-                  <td className="px-5 py-3" style={{ color: '#e5e5e5' }}>{row.title}</td>
+                <tr key={row.id} style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+                  <td className="px-5 py-3" style={{ color: 'var(--text)' }}>{row.title}</td>
                   <td className="px-5 py-3">
                     <span className="px-2 py-0.5 rounded" style={{
-                      background: row.status === 'ACTIVE' ? 'rgba(74,124,63,0.2)' : 'rgba(100,100,100,0.15)',
-                      color: row.status === 'ACTIVE' ? '#4a7c3f' : '#888'
+                      background: row.status === 'ACTIVE' ? 'var(--accent-bg)' : 'var(--neutral-bg)',
+                      color: row.status === 'ACTIVE' ? 'var(--accent)' : 'var(--muted)'
                     }}>
                       {row.status}
                     </span>
@@ -101,7 +101,7 @@ export default function ETAManagerPage() {
                       onChange={e => updateRow(row.id, 'eta', e.target.value)}
                       placeholder="e.g. 2-3 weeks"
                       className="px-2 py-1 rounded text-xs w-32 outline-none"
-                      style={{ background: '#0f0f0f', border: '1px solid #333', color: '#e5e5e5' }}
+                      style={{ background: 'var(--bg)', border: '1px solid var(--input-border)', color: 'var(--text)' }}
                     />
                   </td>
                   <td className="px-5 py-3">
@@ -111,7 +111,7 @@ export default function ETAManagerPage() {
                       onChange={e => updateRow(row.id, 'etaNote', e.target.value)}
                       placeholder="Additional note..."
                       className="px-2 py-1 rounded text-xs w-48 outline-none"
-                      style={{ background: '#0f0f0f', border: '1px solid #333', color: '#e5e5e5' }}
+                      style={{ background: 'var(--bg)', border: '1px solid var(--input-border)', color: 'var(--text)' }}
                     />
                   </td>
                   <td className="px-5 py-3">
@@ -120,9 +120,9 @@ export default function ETAManagerPage() {
                       disabled={row.saving}
                       className="flex items-center gap-1 px-3 py-1 rounded text-xs tracking-widest uppercase transition-colors"
                       style={{
-                        background: row.saved ? 'rgba(74,124,63,0.3)' : 'rgba(74,124,63,0.15)',
-                        border: '1px solid #4a7c3f',
-                        color: '#4a7c3f',
+                        background: row.saved ? 'var(--accent-border)' : 'var(--accent-bg)',
+                        border: '1px solid var(--accent)',
+                        color: 'var(--accent)',
                       }}
                     >
                       <Save size={11} />

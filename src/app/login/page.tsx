@@ -31,36 +31,36 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center" style={{ background: '#0f0f0f' }}>
+    <div className="min-h-screen flex items-center justify-center" style={{ background: 'var(--bg)' }}>
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
-          <div className="text-2xl font-bold tracking-widest uppercase text-white mb-1">OBJEXYZ</div>
-          <div className="text-xs tracking-widest uppercase" style={{ color: '#4a7c3f' }}>CMS OPERATIONS</div>
+          <div className="text-2xl font-bold tracking-widest uppercase txt-heading mb-1">OBJEXYZ</div>
+          <div className="text-xs tracking-widest uppercase" style={{ color: 'var(--accent)' }}>CMS OPERATIONS</div>
         </div>
-        <form onSubmit={handleSubmit} className="rounded-lg p-8 space-y-4" style={{ background: '#1a1a1a', border: '1px solid #2a2a2a' }}>
+        <form onSubmit={handleSubmit} className="rounded-lg p-8 space-y-4" style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
           <div>
-            <label className="block text-xs tracking-widest uppercase mb-2" style={{ color: '#888' }}>ACCESS CODE</label>
+            <label className="block text-xs tracking-widest uppercase mb-2" style={{ color: 'var(--muted)' }}>ACCESS CODE</label>
             <input
               type="password"
               value={password}
               onChange={e => setPassword(e.target.value)}
-              className="w-full px-3 py-2 rounded text-sm text-white outline-none focus:ring-1"
-              style={{ background: '#0f0f0f', border: '1px solid #2a2a2a', focusRingColor: '#4a7c3f' } as React.CSSProperties}
+              className="w-full px-3 py-2 rounded text-sm outline-none focus:ring-1"
+              style={{ background: 'var(--bg)', border: '1px solid var(--border)', focusRingColor: 'var(--accent)' } as React.CSSProperties}
               placeholder="••••••••"
               autoFocus
             />
           </div>
-          {error && <div className="text-xs" style={{ color: '#ef4444' }}>{error}</div>}
+          {error && <div className="text-xs" style={{ color: 'var(--danger)' }}>{error}</div>}
           <button
             type="submit"
             disabled={loading}
             className="w-full py-2 rounded text-sm font-medium tracking-widest uppercase transition-colors"
-            style={{ background: '#4a7c3f', color: 'white' }}
+            style={{ background: 'var(--accent)', color: 'white' }}
           >
             {loading ? 'AUTHENTICATING...' : 'ENTER'}
           </button>
         </form>
-        <div className="text-center mt-4 text-xs" style={{ color: '#444' }}>
+        <div className="text-center mt-4 text-xs" style={{ color: 'var(--faint)' }}>
           OBJEXYZ STUDIO — LAHORE/KARACHI
         </div>
       </div>

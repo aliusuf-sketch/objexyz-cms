@@ -58,60 +58,60 @@ export default function DashboardPage() {
   return (
     <div>
       <div className="mb-8">
-        <h1 className="text-xl font-bold tracking-widest uppercase text-white">DASHBOARD</h1>
-        <p className="text-xs mt-1 tracking-widest" style={{ color: '#555' }}>OBJEXYZ STUDIO — OPS CENTER — SINCE 2026-05-09</p>
+        <h1 className="text-xl font-bold tracking-widest uppercase txt-heading">DASHBOARD</h1>
+        <p className="text-xs mt-1 tracking-widest" style={{ color: 'var(--muted-2)' }}>OBJEXYZ STUDIO — OPS CENTER — SINCE 2026-05-09</p>
       </div>
 
       {loading ? (
-        <div className="text-xs tracking-widest" style={{ color: '#555' }}>LOADING OPERATIONS DATA...</div>
+        <div className="text-xs tracking-widest" style={{ color: 'var(--muted-2)' }}>LOADING OPERATIONS DATA...</div>
       ) : (
         <>
           {/* KPIs */}
           <div className="grid grid-cols-2 gap-4 mb-8 lg:grid-cols-4">
             {kpis.map(k => (
-              <div key={k.label} className="rounded-lg p-5" style={{ background: '#1a1a1a', border: '1px solid #2a2a2a' }}>
-                <div className="text-xs tracking-widest mb-2" style={{ color: '#555' }}>{k.label}</div>
-                <div className="text-2xl font-bold" style={{ color: k.accent ? '#4a7c3f' : '#e5e5e5' }}>{k.value}</div>
+              <div key={k.label} className="rounded-lg p-5" style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
+                <div className="text-xs tracking-widest mb-2" style={{ color: 'var(--muted-2)' }}>{k.label}</div>
+                <div className="text-2xl font-bold" style={{ color: k.accent ? 'var(--accent)' : 'var(--text)' }}>{k.value}</div>
               </div>
             ))}
           </div>
 
           {/* Recent Orders */}
-          <div className="rounded-lg mb-8" style={{ background: '#1a1a1a', border: '1px solid #2a2a2a' }}>
-            <div className="px-5 py-4 border-b" style={{ borderColor: '#2a2a2a' }}>
-              <h2 className="text-xs font-bold tracking-widest uppercase" style={{ color: '#888' }}>RECENT ORDERS</h2>
+          <div className="rounded-lg mb-8" style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
+            <div className="px-5 py-4 border-b" style={{ borderColor: 'var(--border)' }}>
+              <h2 className="text-xs font-bold tracking-widest uppercase" style={{ color: 'var(--muted)' }}>RECENT ORDERS</h2>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-xs">
                 <thead>
-                  <tr style={{ borderBottom: '1px solid #2a2a2a' }}>
+                  <tr style={{ borderBottom: '1px solid var(--border)' }}>
                     {['ORDER', 'DATE', 'FINANCIAL', 'FULFILLMENT', 'AMOUNT'].map(h => (
-                      <th key={h} className="text-left px-5 py-3 tracking-widest" style={{ color: '#555' }}>{h}</th>
+                      <th key={h} className="text-left px-5 py-3 tracking-widest" style={{ color: 'var(--muted-2)' }}>{h}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
                   {orders.slice(0, 10).map(order => (
-                    <tr key={order.id} style={{ borderBottom: '1px solid #1f1f1f' }}>
-                      <td className="px-5 py-3 font-mono" style={{ color: '#4a7c3f' }}>{order.name}</td>
-                      <td className="px-5 py-3" style={{ color: '#888' }}>{formatDate(order.createdAt)}</td>
+                    <tr key={order.id} style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+                      <td className="px-5 py-3 font-mono" style={{ color: 'var(--accent)' }}>{order.name}</td>
+                      <td className="px-5 py-3" style={{ color: 'var(--muted)' }}>{formatDate(order.createdAt)}</td>
                       <td className="px-5 py-3">
                         <span className="px-2 py-0.5 rounded text-xs" style={{
-                          background: order.financialStatus === 'PAID' ? 'rgba(74,124,63,0.2)' : 'rgba(245,158,11,0.15)',
-                          color: order.financialStatus === 'PAID' ? '#4a7c3f' : '#f59e0b'
+                          background: order.financialStatus === 'PAID' ? 'var(--accent-bg)' : 'var(--warn-bg)',
+                          color: order.financialStatus === 'PAID' ? 'var(--accent)' : 'var(--warn)'
                         }}>
                           {order.financialStatus}
                         </span>
                       </td>
                       <td className="px-5 py-3">
                         <span className="px-2 py-0.5 rounded text-xs" style={{
-                          background: order.fulfillmentStatus === 'FULFILLED' ? 'rgba(74,124,63,0.2)' : 'rgba(100,100,100,0.2)',
-                          color: order.fulfillmentStatus === 'FULFILLED' ? '#4a7c3f' : '#888'
+                          background: order.fulfillmentStatus === 'FULFILLED' ? 'var(--accent-bg)' : 'var(--neutral-bg)',
+                          color: order.fulfillmentStatus === 'FULFILLED' ? 'var(--accent)' : 'var(--muted)'
                         }}>
                           {order.fulfillmentStatus || 'UNFULFILLED'}
                         </span>
                       </td>
-                      <td className="px-5 py-3 font-mono" style={{ color: '#e5e5e5' }}>
+                      <td className="px-5 py-3 font-mono" style={{ color: 'var(--text)' }}>
                         {formatPKR(order.totalPriceSet?.shopMoney?.amount || 0)}
                       </td>
                     </tr>
@@ -122,19 +122,19 @@ export default function DashboardPage() {
           </div>
 
           {/* Top Products */}
-          <div className="rounded-lg" style={{ background: '#1a1a1a', border: '1px solid #2a2a2a' }}>
-            <div className="px-5 py-4 border-b" style={{ borderColor: '#2a2a2a' }}>
-              <h2 className="text-xs font-bold tracking-widest uppercase" style={{ color: '#888' }}>TOP PRODUCTS</h2>
+          <div className="rounded-lg" style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
+            <div className="px-5 py-4 border-b" style={{ borderColor: 'var(--border)' }}>
+              <h2 className="text-xs font-bold tracking-widest uppercase" style={{ color: 'var(--muted)' }}>TOP PRODUCTS</h2>
             </div>
             <div className="p-5 space-y-3">
               {topProducts.map(([title, qty]) => (
                 <div key={title} className="flex items-center justify-between">
-                  <span className="text-xs" style={{ color: '#e5e5e5' }}>{title}</span>
-                  <span className="text-xs font-mono" style={{ color: '#4a7c3f' }}>{qty} units</span>
+                  <span className="text-xs" style={{ color: 'var(--text)' }}>{title}</span>
+                  <span className="text-xs font-mono" style={{ color: 'var(--accent)' }}>{qty} units</span>
                 </div>
               ))}
               {topProducts.length === 0 && (
-                <div className="text-xs" style={{ color: '#555' }}>No product data yet</div>
+                <div className="text-xs" style={{ color: 'var(--muted-2)' }}>No product data yet</div>
               )}
             </div>
           </div>

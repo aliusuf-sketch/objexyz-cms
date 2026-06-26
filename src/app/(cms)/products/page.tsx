@@ -60,44 +60,44 @@ export default function ProductsPage() {
   return (
     <div>
       <div className="mb-8">
-        <h1 className="text-xl font-bold tracking-widest uppercase text-white">PRODUCTS</h1>
-        <p className="text-xs mt-1 tracking-widest" style={{ color: '#555' }}>PRODUCT CATALOG MANAGEMENT</p>
+        <h1 className="text-xl font-bold tracking-widest uppercase txt-heading">PRODUCTS</h1>
+        <p className="text-xs mt-1 tracking-widest" style={{ color: 'var(--muted-2)' }}>PRODUCT CATALOG MANAGEMENT</p>
       </div>
 
       {loading ? (
-        <div className="text-xs tracking-widest" style={{ color: '#555' }}>LOADING PRODUCT CATALOG...</div>
+        <div className="text-xs tracking-widest" style={{ color: 'var(--muted-2)' }}>LOADING PRODUCT CATALOG...</div>
       ) : (
-        <div className="rounded-lg overflow-hidden" style={{ background: '#1a1a1a', border: '1px solid #2a2a2a' }}>
+        <div className="rounded-lg overflow-hidden" style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
           <div className="overflow-x-auto">
             <table className="w-full text-xs">
               <thead>
-                <tr style={{ borderBottom: '1px solid #2a2a2a' }}>
+                <tr style={{ borderBottom: '1px solid var(--border)' }}>
                   {['PRODUCT', 'STATUS', '8IN', '16IN', 'CUSTOM', 'ETA', 'ACTION'].map(h => (
-                    <th key={h} className="text-left px-5 py-3 tracking-widest" style={{ color: '#555' }}>{h}</th>
+                    <th key={h} className="text-left px-5 py-3 tracking-widest" style={{ color: 'var(--muted-2)' }}>{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {products.map(product => (
-                  <tr key={product.id} style={{ borderBottom: '1px solid #1f1f1f' }}>
+                  <tr key={product.id} style={{ borderBottom: '1px solid var(--border-subtle)' }}>
                     <td className="px-5 py-3">
-                      <div className="font-medium" style={{ color: '#e5e5e5' }}>{product.title}</div>
+                      <div className="font-medium" style={{ color: 'var(--text)' }}>{product.title}</div>
                       {product.productType && (
-                        <div className="text-xs mt-0.5" style={{ color: '#555' }}>{product.productType}</div>
+                        <div className="text-xs mt-0.5" style={{ color: 'var(--muted-2)' }}>{product.productType}</div>
                       )}
                     </td>
                     <td className="px-5 py-3">
                       <span className="px-2 py-0.5 rounded" style={{
-                        background: product.status === 'ACTIVE' ? 'rgba(74,124,63,0.2)' : 'rgba(100,100,100,0.15)',
-                        color: product.status === 'ACTIVE' ? '#4a7c3f' : '#888'
+                        background: product.status === 'ACTIVE' ? 'var(--accent-bg)' : 'var(--neutral-bg)',
+                        color: product.status === 'ACTIVE' ? 'var(--accent)' : 'var(--muted)'
                       }}>
                         {product.status}
                       </span>
                     </td>
-                    <td className="px-5 py-3 font-mono" style={{ color: '#888' }}>{getVariantPrice(product, '8in')}</td>
-                    <td className="px-5 py-3 font-mono" style={{ color: '#888' }}>{getVariantPrice(product, '16in')}</td>
-                    <td className="px-5 py-3 font-mono" style={{ color: '#888' }}>{getVariantPrice(product, 'custom')}</td>
-                    <td className="px-5 py-3" style={{ color: '#888' }}>{getMetafield(product, 'eta')}</td>
+                    <td className="px-5 py-3 font-mono" style={{ color: 'var(--muted)' }}>{getVariantPrice(product, '8in')}</td>
+                    <td className="px-5 py-3 font-mono" style={{ color: 'var(--muted)' }}>{getVariantPrice(product, '16in')}</td>
+                    <td className="px-5 py-3 font-mono" style={{ color: 'var(--muted)' }}>{getVariantPrice(product, 'custom')}</td>
+                    <td className="px-5 py-3" style={{ color: 'var(--muted)' }}>{getMetafield(product, 'eta')}</td>
                     <td className="px-5 py-3">
                       <button
                         onClick={() => toggleStatus(product)}
@@ -105,8 +105,8 @@ export default function ProductsPage() {
                         className="px-3 py-1 rounded text-xs tracking-widest uppercase transition-colors"
                         style={{
                           background: 'transparent',
-                          border: `1px solid ${product.status === 'ACTIVE' ? '#555' : '#4a7c3f'}`,
-                          color: product.status === 'ACTIVE' ? '#555' : '#4a7c3f',
+                          border: `1px solid ${product.status === 'ACTIVE' ? 'var(--muted-2)' : 'var(--accent)'}`,
+                          color: product.status === 'ACTIVE' ? 'var(--muted-2)' : 'var(--accent)',
                         }}
                       >
                         {toggling === product.id ? '...' : product.status === 'ACTIVE' ? 'DRAFT' : 'ACTIVATE'}

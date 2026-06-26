@@ -44,24 +44,24 @@ export default function NewProductPage() {
   }
 
   const inputStyle = {
-    background: '#0f0f0f',
-    border: '1px solid #2a2a2a',
-    color: '#e5e5e5',
+    background: 'var(--bg)',
+    border: '1px solid var(--border)',
+    color: 'var(--text)',
   };
 
   const labelClass = 'block text-xs tracking-widest uppercase mb-1.5';
-  const labelStyle = { color: '#555' };
+  const labelStyle = { color: 'var(--muted-2)' };
   const inputClass = 'w-full px-3 py-2 rounded text-sm outline-none';
 
   return (
     <div>
       <div className="mb-8">
-        <h1 className="text-xl font-bold tracking-widest uppercase text-white">NEW PRODUCT</h1>
-        <p className="text-xs mt-1 tracking-widest" style={{ color: '#555' }}>ADD TO OBJEXYZ CATALOG</p>
+        <h1 className="text-xl font-bold tracking-widest uppercase txt-heading">NEW PRODUCT</h1>
+        <p className="text-xs mt-1 tracking-widest" style={{ color: 'var(--muted-2)' }}>ADD TO OBJEXYZ CATALOG</p>
       </div>
 
       <div className="max-w-2xl">
-        <form onSubmit={handleSubmit} className="rounded-lg p-6 space-y-5" style={{ background: '#1a1a1a', border: '1px solid #2a2a2a' }}>
+        <form onSubmit={handleSubmit} className="rounded-lg p-6 space-y-5" style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
 
           <div>
             <label className={labelClass} style={labelStyle}>PRODUCT TITLE *</label>
@@ -147,12 +147,12 @@ export default function NewProductPage() {
           </div>
 
           {error && (
-            <div className="text-xs rounded p-3" style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', color: '#ef4444' }}>
+            <div className="text-xs rounded p-3" style={{ background: 'var(--danger-bg)', border: '1px solid var(--danger-border)', color: 'var(--danger)' }}>
               {error}
             </div>
           )}
           {success && (
-            <div className="text-xs rounded p-3" style={{ background: 'rgba(74,124,63,0.15)', border: '1px solid rgba(74,124,63,0.4)', color: '#4a7c3f' }}>
+            <div className="text-xs rounded p-3" style={{ background: 'var(--accent-bg)', border: '1px solid var(--accent-border)', color: 'var(--accent)' }}>
               {success}
             </div>
           )}
@@ -161,7 +161,7 @@ export default function NewProductPage() {
             type="submit"
             disabled={submitting}
             className="w-full py-2.5 rounded text-sm font-medium tracking-widest uppercase transition-colors"
-            style={{ background: '#4a7c3f', color: 'white' }}
+            style={{ background: 'var(--accent)', color: 'white' }}
           >
             {submitting ? 'CREATING...' : 'CREATE PRODUCT'}
           </button>
