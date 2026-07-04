@@ -1,6 +1,8 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { formatPKR, formatDate } from '@/lib/utils';
+import SortableHeader from '@/components/SortableHeader';
+import { useSortable } from '@/hooks/useSortable';
 
 interface Order {
   id: string;
@@ -48,6 +50,20 @@ export default function DashboardPage() {
   });
   const topProducts = Object.entries(productCounts).sort((a, b) => b[1] - a[1]).slice(0, 5);
 
+  interface DashOrderRow { id: string; name: string; createdAt: string; financialStatus: string; fulfillmentStatus: string; amount: number; }
+  const dashRows: DashOrderRow[] = useMemo(() => orders.slice(0, 10).map(o => ({
+    id: o.id,
+    name: o.name,
+    createdAt: o.createdAt,
+    financialStatus: o.financialStatus || '',
+    fulfillmentStatus: o.fulfillmentStatus || 'UNFULFILLED',
+    amount: Number(o.totalPriceSet?.shopMoney?.amount || 0),
+  })), [orders]);
+  const { sorted: sortedDash, sortKey: dsk, sortDir: dsd, toggle: dtoggle } = useSortable<DashOrderRow>(dashRows, 'createdAt', 'desc');
+  const dsh = (label: string, key: keyof DashOrderRow) => (
+    <SortableHeader label={label} sortKey={key as string} activeSortKey={dsk as string} sortDir={dsd} onSort={k => dtoggle(k as keyof DashOrderRow)} />
+  );
+
   const kpis = [
     { label: 'TOTAL REVENUE', value: formatPKR(totalRevenue), accent: true },
     { label: 'TOTAL ORDERS', value: totalOrders.toString(), accent: false },
@@ -85,13 +101,15 @@ export default function DashboardPage() {
               <table className="w-full text-xs">
                 <thead>
                   <tr style={{ borderBottom: '1px solid var(--border)' }}>
-                    {['ORDER', 'DATE', 'FINANCIAL', 'FULFILLMENT', 'AMOUNT'].map(h => (
-                      <th key={h} className="text-left px-5 py-3 tracking-widest" style={{ color: 'var(--muted-2)' }}>{h}</th>
-                    ))}
+                    {dsh('ORDER', 'name')}
+                    {dsh('DATE', 'createdAt')}
+                    {dsh('FINANCIAL', 'financialStatus')}
+                    {dsh('FULFILLMENT', 'fulfillmentStatus')}
+                    {dsh('AMOUNT', 'amount')}
                   </tr>
                 </thead>
                 <tbody>
-                  {orders.slice(0, 10).map(order => (
+                  {sortedDash.map(order => (
                     <tr key={order.id} style={{ borderBottom: '1px solid var(--border-subtle)' }}>
                       <td className="px-5 py-3 font-mono" style={{ color: 'var(--accent)' }}>{order.name}</td>
                       <td className="px-5 py-3" style={{ color: 'var(--muted)' }}>{formatDate(order.createdAt)}</td>
@@ -108,11 +126,11 @@ export default function DashboardPage() {
                           background: order.fulfillmentStatus === 'FULFILLED' ? 'var(--accent-bg)' : 'var(--neutral-bg)',
                           color: order.fulfillmentStatus === 'FULFILLED' ? 'var(--accent)' : 'var(--muted)'
                         }}>
-                          {order.fulfillmentStatus || 'UNFULFILLED'}
+                          {order.fulfillmentStatus}
                         </span>
                       </td>
                       <td className="px-5 py-3 font-mono" style={{ color: 'var(--text)' }}>
-                        {formatPKR(order.totalPriceSet?.shopMoney?.amount || 0)}
+                        {formatPKR(order.amount)}
                       </td>
                     </tr>
                   ))}

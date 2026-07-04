@@ -1,6 +1,8 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { Save } from 'lucide-react';
+import SortableHeader from '@/components/SortableHeader';
+import { useSortable } from '@/hooks/useSortable';
 
 interface Metafield { namespace: string; key: string; value: string }
 interface Variant {
@@ -82,6 +84,11 @@ export default function ETAManagerPage() {
     }
   }
 
+  const { sorted, sortKey, sortDir, toggle } = useSortable<ETARow>(rows, 'productTitle', 'asc');
+  const sh = (label: string, key: keyof ETARow) => (
+    <SortableHeader label={label} sortKey={key as string} activeSortKey={sortKey as string} sortDir={sortDir} onSort={k => toggle(k as keyof ETARow)} />
+  );
+
   return (
     <div>
       <div className="mb-8">
@@ -96,13 +103,16 @@ export default function ETAManagerPage() {
           <table className="w-full text-xs">
             <thead>
               <tr style={{ borderBottom: '1px solid var(--border)' }}>
-                {['PRODUCT', 'VARIANT', 'STATUS', 'ETA', 'ETA NOTE', 'SAVE'].map(h => (
-                  <th key={h} className="text-left px-5 py-3 tracking-widest" style={{ color: 'var(--muted-2)' }}>{h}</th>
-                ))}
+                {sh('PRODUCT', 'productTitle')}
+                {sh('VARIANT', 'variantTitle')}
+                {sh('STATUS', 'productStatus')}
+                {sh('ETA', 'eta')}
+                <th className="text-left px-5 py-3 tracking-widest" style={{ color: 'var(--muted-2)' }}>ETA NOTE</th>
+                <th className="text-left px-5 py-3 tracking-widest" style={{ color: 'var(--muted-2)' }}>SAVE</th>
               </tr>
             </thead>
             <tbody>
-              {rows.map(row => (
+              {sorted.map(row => (
                 <tr
                   key={row.variantId}
                   style={{
@@ -110,8 +120,8 @@ export default function ETAManagerPage() {
                     borderTop: row.isFirstOfProduct ? '1px solid var(--border)' : undefined,
                   }}
                 >
-                  <td className="px-5 py-3" style={{ color: row.isFirstOfProduct ? 'var(--text)' : 'transparent' }}>
-                    {row.isFirstOfProduct ? row.productTitle : ''}
+                  <td className="px-5 py-3" style={{ color: 'var(--text)' }}>
+                    {row.productTitle}
                   </td>
                   <td className="px-5 py-3 font-mono" style={{ color: 'var(--accent)' }}>{row.variantTitle}</td>
                   <td className="px-5 py-3">
