@@ -38,8 +38,17 @@ function Card({ item, onMove }: { item: QueueItem; onMove: (i: QueueItem, s: Sta
         </div>
       </div>
       <div className="mt-2 space-y-0.5 text-xs" style={{ color: 'var(--muted-2)' }}>
-        <div className="flex justify-between">
+        <div className="flex justify-between items-center">
           <span className="font-mono" style={{ color: 'var(--accent)' }}>{item.orderName}</span>
+          <span className="px-1.5 py-0.5 rounded" style={{
+            background: item.financialStatus === 'PAID' ? 'var(--accent-bg)' : 'var(--warn-bg)',
+            color: item.financialStatus === 'PAID' ? 'var(--accent)' : 'var(--warn)',
+          }}>
+            {item.financialStatus || 'UNPAID'}
+          </span>
+        </div>
+        <div className="flex justify-between">
+          <span>customer</span>
           <span>{item.customer}</span>
         </div>
         <div className="flex justify-between">
@@ -75,15 +84,9 @@ function Card({ item, onMove }: { item: QueueItem; onMove: (i: QueueItem, s: Sta
 export default function QueuePage() {
   const { items, loading, error, setStage } = useQueue();
 
-  // Only produce items that are paid (skip pending/refunded for the board).
-  const active = useMemo(
-    () => items.filter(i => i.financialStatus === 'PAID' || i.stage !== 'PRINT'),
-    [items]
-  );
-
   const byStage = useMemo(() => {
     const map: Record<Stage, QueueItem[]> = { PRINT: [], PAINT: [], READY: [], SHIPPED: [] };
-    active.forEach(i => map[i.stage].push(i));
+    items.forEach(i => map[i.stage].push(i));
     // Within a column, sort by ship-by urgency (soonest first).
     STAGES.forEach(s => map[s].sort((a, b) => {
       const ta = shipByDate(a.createdAt, a.eta)?.getTime() ?? Infinity;
@@ -91,7 +94,7 @@ export default function QueuePage() {
       return ta - tb;
     }));
     return map;
-  }, [active]);
+  }, [items]);
 
   return (
     <div>

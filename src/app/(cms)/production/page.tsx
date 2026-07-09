@@ -25,8 +25,8 @@ export default function ProductionPage() {
   const { items, loading, error } = useQueue();
 
   const rows: PlanRow[] = useMemo(() => {
-    // To-make = paid items not yet shipped.
-    const toMake = items.filter(i => i.stage !== 'SHIPPED' && i.financialStatus === 'PAID');
+    // To-make = everything not yet shipped (paid or pending — made to order).
+    const toMake = items.filter(i => i.stage !== 'SHIPPED');
     const groups = new Map<string, { item: QueueItem; qty: number; orders: Set<string> }>();
     toMake.forEach(i => {
       const k = `${i.productTitle}::${i.variantTitle}`;
@@ -58,7 +58,7 @@ export default function ProductionPage() {
     <div>
       <div className="mb-8">
         <h1 className="text-xl font-bold tracking-widest uppercase txt-heading">PRODUCTION PLANNING</h1>
-        <p className="text-xs mt-1 tracking-widest" style={{ color: 'var(--muted-2)' }}>WHAT TO MAKE — PAID, UNSHIPPED ORDERS</p>
+        <p className="text-xs mt-1 tracking-widest" style={{ color: 'var(--muted-2)' }}>WHAT TO MAKE — ALL UNSHIPPED ORDERS</p>
       </div>
 
       {loading && <div className="text-xs tracking-widest" style={{ color: 'var(--muted-2)' }}>LOADING PRODUCTION DATA...</div>}
