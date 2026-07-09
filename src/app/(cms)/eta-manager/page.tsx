@@ -4,12 +4,12 @@ import { Save } from 'lucide-react';
 import SortableHeader from '@/components/SortableHeader';
 import { useSortable } from '@/hooks/useSortable';
 
-interface Metafield { namespace: string; key: string; value: string }
+interface LocalData { eta?: string; etaNote?: string; materialGrams?: string; dimensions?: string }
 interface Variant {
   id: string;
   title: string;
   price: string;
-  metafields: Metafield[];
+  local?: LocalData;
 }
 interface Product {
   id: string;
@@ -51,9 +51,9 @@ export default function ETAManagerPage() {
               productTitle: p.title,
               productStatus: p.status,
               variantTitle: v.title,
-              eta: v.metafields?.find(m => m.key === 'eta')?.value || '',
-              etaNote: v.metafields?.find(m => m.key === 'eta_note')?.value || '',
-              materialGrams: v.metafields?.find(m => m.key === 'material_grams')?.value || '',
+              eta: v.local?.eta || '',
+              etaNote: v.local?.etaNote || '',
+              materialGrams: v.local?.materialGrams || '',
               isFirstOfProduct: i === 0,
               saving: false,
               saved: false,
@@ -74,11 +74,11 @@ export default function ETAManagerPage() {
     if (!row) return;
     setRows(prev => prev.map(r => r.variantId === variantId ? { ...r, saving: true } : r));
     try {
-      await fetch('/api/shopify/update-eta', {
+      await fetch('/api/local/variant', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          ownerId: variantId,
+          variantId,
           eta: row.eta,
           etaNote: row.etaNote,
           materialGrams: row.materialGrams,

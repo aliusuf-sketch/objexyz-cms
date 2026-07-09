@@ -4,8 +4,8 @@ import { formatPKR } from '@/lib/utils';
 import SortableHeader from '@/components/SortableHeader';
 import { useSortable } from '@/hooks/useSortable';
 
-interface Metafield { namespace: string; key: string; value: string }
-interface Variant { id: string; title: string; price: string; metafields: Metafield[]; }
+interface LocalData { eta?: string; etaNote?: string; materialGrams?: string; dimensions?: string }
+interface Variant { id: string; title: string; price: string; local?: LocalData; }
 interface Product {
   id: string;
   title: string;
@@ -13,7 +13,6 @@ interface Product {
   productType: string;
   tags: string[];
   variants: { edges: { node: Variant }[] };
-  metafields: Metafield[];
 }
 
 interface ProductRow {
@@ -69,7 +68,7 @@ export default function ProductsPage() {
   function variantEtaSummary(p: Product) {
     const parts = (p.variants?.edges || [])
       .map(e => {
-        const eta = e.node.metafields?.find(m => m.key === 'eta')?.value;
+        const eta = e.node.local?.eta;
         return eta ? `${e.node.title}: ${eta}` : null;
       })
       .filter(Boolean);

@@ -87,24 +87,6 @@ export const PRODUCTS_QUERY = `
                 id
                 title
                 price
-                metafields(namespace: "custom", first: 10) {
-                  edges {
-                    node {
-                      namespace
-                      key
-                      value
-                    }
-                  }
-                }
-              }
-            }
-          }
-          metafields(namespace: "custom", first: 20) {
-            edges {
-              node {
-                namespace
-                key
-                value
               }
             }
           }
@@ -198,9 +180,6 @@ export const QUEUE_QUERY = `
           financialStatus: displayFinancialStatus
           fulfillmentStatus: displayFulfillmentStatus
           customer { firstName lastName }
-          productionStages: metafield(namespace: "custom", key: "production_stages") {
-            value
-          }
           lineItems(first: 50) {
             edges {
               node {
@@ -210,8 +189,6 @@ export const QUEUE_QUERY = `
                 variant {
                   id
                   title
-                  eta: metafield(namespace: "custom", key: "eta") { value }
-                  grams: metafield(namespace: "custom", key: "material_grams") { value }
                 }
                 product {
                   id

@@ -3,12 +3,12 @@ import { useEffect, useMemo, useState } from 'react';
 import { formatPKR } from '@/lib/utils';
 import { Save, Package, X } from 'lucide-react';
 
-interface Metafield { namespace: string; key: string; value: string }
+interface LocalData { eta?: string; etaNote?: string; materialGrams?: string; dimensions?: string }
 interface Variant {
   id: string;
   title: string;
   price: string;
-  metafields: Metafield[];
+  local?: LocalData;
 }
 interface Product {
   id: string;
@@ -68,9 +68,9 @@ export default function CataloguePage() {
             variantId: ve.node.id,
             title: ve.node.title,
             price: ve.node.price,
-            dimensions: ve.node.metafields?.find(m => m.key === 'dimensions')?.value || '',
-            eta: ve.node.metafields?.find(m => m.key === 'eta')?.value || '',
-            materialGrams: ve.node.metafields?.find(m => m.key === 'material_grams')?.value || '',
+            dimensions: ve.node.local?.dimensions || '',
+            eta: ve.node.local?.eta || '',
+            materialGrams: ve.node.local?.materialGrams || '',
             saving: false,
             saved: false,
           })),
@@ -95,11 +95,11 @@ export default function CataloguePage() {
       variants: g.variants.map(v => v.variantId !== variantId ? v : { ...v, saving: true }),
     }));
     try {
-      await fetch('/api/shopify/update-eta', {
+      await fetch('/api/local/variant', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          ownerId: variantId,
+          variantId,
           dimensions: row.dimensions,
           eta: row.eta,
           materialGrams: row.materialGrams,

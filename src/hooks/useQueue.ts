@@ -17,8 +17,7 @@ interface RawLineItem {
   variant?: {
     id: string;
     title: string;
-    eta?: { value: string } | null;
-    grams?: { value: string } | null;
+    local?: { eta?: string; materialGrams?: string } | null;
   } | null;
   product?: { id: string; featuredImage?: { url: string; altText?: string } | null } | null;
 }
@@ -29,7 +28,7 @@ interface RawOrder {
   financialStatus: string;
   fulfillmentStatus: string;
   customer?: { firstName: string; lastName: string } | null;
-  productionStages?: { value: string } | null;
+  productionStages?: Record<string, Stage> | null;
   lineItems: { edges: { node: RawLineItem }[] };
 }
 
@@ -52,15 +51,6 @@ export interface QueueItem {
   stage: Stage;
 }
 
-function parseStages(value?: string | null): Record<string, Stage> {
-  if (!value) return {};
-  try {
-    return JSON.parse(value) as Record<string, Stage>;
-  } catch {
-    return {};
-  }
-}
-
 export function useQueue() {
   const [items, setItems] = useState<QueueItem[]>([]);
   const [orderStages, setOrderStages] = useState<Record<string, Record<string, Stage>>>({});
@@ -76,7 +66,7 @@ export function useQueue() {
         const stagesByOrder: Record<string, Record<string, Stage>> = {};
         const flat: QueueItem[] = [];
         edges.forEach(({ node: o }) => {
-          const stages = parseStages(o.productionStages?.value);
+          const stages = o.productionStages || {};
           stagesByOrder[o.id] = stages;
           (o.lineItems?.edges || []).forEach(({ node: li }) => {
             const defaultStage: Stage = o.fulfillmentStatus === 'FULFILLED' ? 'SHIPPED' : 'PRINT';
@@ -92,8 +82,8 @@ export function useQueue() {
               variantTitle: li.variant?.title || '',
               quantity: li.quantity,
               imageUrl: li.product?.featuredImage?.url,
-              eta: li.variant?.eta?.value || undefined,
-              grams: Number(li.variant?.grams?.value || 0),
+              eta: li.variant?.local?.eta || undefined,
+              grams: Number(li.variant?.local?.materialGrams || 0),
               fulfillmentStatus: o.fulfillmentStatus || 'UNFULFILLED',
               financialStatus: o.financialStatus || '',
               stage: stages[li.id] || defaultStage,
@@ -113,7 +103,7 @@ export function useQueue() {
     const merged = { ...(orderStages[item.orderId] || {}), [item.lineItemId]: next };
     setOrderStages(prev => ({ ...prev, [item.orderId]: merged }));
     try {
-      await fetch('/api/shopify/update-stage', {
+      await fetch('/api/local/stage', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ orderId: item.orderId, stages: merged }),
