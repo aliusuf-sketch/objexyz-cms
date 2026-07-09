@@ -1,0 +1,128 @@
+'use client';
+import { useCallback, useEffect, useState } from 'react';
+
+export type Stage = 'PRINT' | 'PAINT' | 'READY' | 'SHIPPED';
+export const STAGES: Stage[] = ['PRINT', 'PAINT', 'READY', 'SHIPPED'];
+export const STAGE_LABELS: Record<Stage, string> = {
+  PRINT: 'PRINT',
+  PAINT: 'PAINT',
+  READY: 'READY TO SHIP',
+  SHIPPED: 'SHIPPED',
+};
+
+interface RawLineItem {
+  id: string;
+  title: string;
+  quantity: number;
+  variant?: {
+    id: string;
+    title: string;
+    eta?: { value: string } | null;
+    grams?: { value: string } | null;
+  } | null;
+  product?: { id: string; featuredImage?: { url: string; altText?: string } | null } | null;
+}
+interface RawOrder {
+  id: string;
+  name: string;
+  createdAt: string;
+  financialStatus: string;
+  fulfillmentStatus: string;
+  customer?: { firstName: string; lastName: string } | null;
+  productionStages?: { value: string } | null;
+  lineItems: { edges: { node: RawLineItem }[] };
+}
+
+export interface QueueItem {
+  key: string;
+  orderId: string;
+  orderName: string;
+  lineItemId: string;
+  createdAt: string;
+  customer: string;
+  productId: string;
+  productTitle: string;
+  variantTitle: string;
+  quantity: number;
+  imageUrl?: string;
+  eta?: string;
+  grams: number;
+  fulfillmentStatus: string;
+  financialStatus: string;
+  stage: Stage;
+}
+
+function parseStages(value?: string | null): Record<string, Stage> {
+  if (!value) return {};
+  try {
+    return JSON.parse(value) as Record<string, Stage>;
+  } catch {
+    return {};
+  }
+}
+
+export function useQueue() {
+  const [items, setItems] = useState<QueueItem[]>([]);
+  const [orderStages, setOrderStages] = useState<Record<string, Record<string, Stage>>>({});
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    fetch('/api/shopify/queue')
+      .then(r => r.json())
+      .then(data => {
+        if (data.error) { setError(data.error); return; }
+        const edges: { node: RawOrder }[] = data?.data?.orders?.edges || [];
+        const stagesByOrder: Record<string, Record<string, Stage>> = {};
+        const flat: QueueItem[] = [];
+        edges.forEach(({ node: o }) => {
+          const stages = parseStages(o.productionStages?.value);
+          stagesByOrder[o.id] = stages;
+          (o.lineItems?.edges || []).forEach(({ node: li }) => {
+            const defaultStage: Stage = o.fulfillmentStatus === 'FULFILLED' ? 'SHIPPED' : 'PRINT';
+            flat.push({
+              key: `${o.id}::${li.id}`,
+              orderId: o.id,
+              orderName: o.name,
+              lineItemId: li.id,
+              createdAt: o.createdAt,
+              customer: o.customer ? `${o.customer.firstName} ${o.customer.lastName}`.trim() : 'Guest',
+              productId: li.product?.id || '',
+              productTitle: li.title,
+              variantTitle: li.variant?.title || '',
+              quantity: li.quantity,
+              imageUrl: li.product?.featuredImage?.url,
+              eta: li.variant?.eta?.value || undefined,
+              grams: Number(li.variant?.grams?.value || 0),
+              fulfillmentStatus: o.fulfillmentStatus || 'UNFULFILLED',
+              financialStatus: o.financialStatus || '',
+              stage: stages[li.id] || defaultStage,
+            });
+          });
+        });
+        setOrderStages(stagesByOrder);
+        setItems(flat);
+      })
+      .catch(e => setError(String(e)))
+      .finally(() => setLoading(false));
+  }, []);
+
+  const setStage = useCallback(async (item: QueueItem, next: Stage) => {
+    // Optimistic UI update.
+    setItems(prev => prev.map(it => it.key === item.key ? { ...it, stage: next } : it));
+    const merged = { ...(orderStages[item.orderId] || {}), [item.lineItemId]: next };
+    setOrderStages(prev => ({ ...prev, [item.orderId]: merged }));
+    try {
+      await fetch('/api/shopify/update-stage', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orderId: item.orderId, stages: merged }),
+      });
+    } catch {
+      // Roll back on failure.
+      setItems(prev => prev.map(it => it.key === item.key ? { ...it, stage: item.stage } : it));
+    }
+  }, [orderStages]);
+
+  return { items, loading, error, setStage };
+}

@@ -162,16 +162,60 @@ export const DASHBOARD_QUERY = `
           financialStatus: displayFinancialStatus
           fulfillmentStatus: displayFulfillmentStatus
           totalPriceSet {
-            shopMoney {
-              amount
-              currencyCode
-            }
+            shopMoney { amount currencyCode }
           }
-          lineItems(first: 5) {
+          subtotalPriceSet {
+            shopMoney { amount }
+          }
+          totalOutstandingSet {
+            shopMoney { amount }
+          }
+          lineItems(first: 50) {
             edges {
               node {
                 title
                 quantity
+                variant { price }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+`;
+
+// Queue: line-item level view for production planning + shipping board.
+export const QUEUE_QUERY = `
+  query QueueData($ordersQuery: String!) {
+    orders(first: 250, query: $ordersQuery) {
+      edges {
+        node {
+          id
+          name
+          createdAt
+          financialStatus: displayFinancialStatus
+          fulfillmentStatus: displayFulfillmentStatus
+          customer { firstName lastName }
+          productionStages: metafield(namespace: "custom", key: "production_stages") {
+            value
+          }
+          lineItems(first: 50) {
+            edges {
+              node {
+                id
+                title
+                quantity
+                variant {
+                  id
+                  title
+                  eta: metafield(namespace: "custom", key: "eta") { value }
+                  grams: metafield(namespace: "custom", key: "material_grams") { value }
+                }
+                product {
+                  id
+                  featuredImage { url altText }
+                }
               }
             }
           }

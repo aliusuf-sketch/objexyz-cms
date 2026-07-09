@@ -3,12 +3,14 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import {
   LayoutDashboard, Package, ShoppingCart, BarChart2,
-  Clock, PlusCircle, LogOut
+  Clock, PlusCircle, LogOut, Factory, ListChecks
 } from 'lucide-react';
 import ThemeToggle from './ThemeToggle';
 
 const navItems = [
   { href: '/', label: 'DASHBOARD', icon: LayoutDashboard },
+  { href: '/production', label: 'PRODUCTION', icon: Factory },
+  { href: '/queue', label: 'SHIPPING QUEUE', icon: ListChecks },
   { href: '/products', label: 'PRODUCTS', icon: Package },
   { href: '/orders', label: 'ORDERS', icon: ShoppingCart },
   { href: '/analytics', label: 'ANALYTICS', icon: BarChart2 },
