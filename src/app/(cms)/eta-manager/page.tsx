@@ -25,6 +25,7 @@ interface ETARow {
   variantTitle: string;
   eta: string;
   etaNote: string;
+  materialGrams: string;
   isFirstOfProduct: boolean;
   saving: boolean;
   saved: boolean;
@@ -52,6 +53,7 @@ export default function ETAManagerPage() {
               variantTitle: v.title,
               eta: v.metafields?.find(m => m.key === 'eta')?.value || '',
               etaNote: v.metafields?.find(m => m.key === 'eta_note')?.value || '',
+              materialGrams: v.metafields?.find(m => m.key === 'material_grams')?.value || '',
               isFirstOfProduct: i === 0,
               saving: false,
               saved: false,
@@ -63,7 +65,7 @@ export default function ETAManagerPage() {
       .finally(() => setLoading(false));
   }, []);
 
-  function updateRow(variantId: string, field: 'eta' | 'etaNote', value: string) {
+  function updateRow(variantId: string, field: 'eta' | 'etaNote' | 'materialGrams', value: string) {
     setRows(prev => prev.map(r => r.variantId === variantId ? { ...r, [field]: value, saved: false } : r));
   }
 
@@ -75,7 +77,12 @@ export default function ETAManagerPage() {
       await fetch('/api/shopify/update-eta', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ownerId: variantId, eta: row.eta, etaNote: row.etaNote }),
+        body: JSON.stringify({
+          ownerId: variantId,
+          eta: row.eta,
+          etaNote: row.etaNote,
+          materialGrams: row.materialGrams,
+        }),
       });
       setRows(prev => prev.map(r => r.variantId === variantId ? { ...r, saving: false, saved: true } : r));
       setTimeout(() => setRows(prev => prev.map(r => r.variantId === variantId ? { ...r, saved: false } : r)), 2000);
@@ -93,93 +100,108 @@ export default function ETAManagerPage() {
     <div>
       <div className="mb-8">
         <h1 className="text-xl font-bold tracking-widest uppercase txt-heading">ETA MANAGER</h1>
-        <p className="text-xs mt-1 tracking-widest" style={{ color: 'var(--muted-2)' }}>PER-VARIANT BUILD TIME / ETA METAFIELDS</p>
+        <p className="text-xs mt-1 tracking-widest" style={{ color: 'var(--muted-2)' }}>PER-VARIANT BUILD TIME &amp; MATERIAL USAGE</p>
       </div>
 
       {loading ? (
         <div className="text-xs tracking-widest" style={{ color: 'var(--muted-2)' }}>LOADING PRODUCT DATA...</div>
       ) : (
         <div className="rounded-lg overflow-hidden" style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
-          <table className="w-full text-xs">
-            <thead>
-              <tr style={{ borderBottom: '1px solid var(--border)' }}>
-                {sh('PRODUCT', 'productTitle')}
-                {sh('VARIANT', 'variantTitle')}
-                {sh('STATUS', 'productStatus')}
-                {sh('ETA', 'eta')}
-                <th className="text-left px-5 py-3 tracking-widest" style={{ color: 'var(--muted-2)' }}>ETA NOTE</th>
-                <th className="text-left px-5 py-3 tracking-widest" style={{ color: 'var(--muted-2)' }}>SAVE</th>
-              </tr>
-            </thead>
-            <tbody>
-              {sorted.map(row => (
-                <tr
-                  key={row.variantId}
-                  style={{
-                    borderBottom: '1px solid var(--border-subtle)',
-                    borderTop: row.isFirstOfProduct ? '1px solid var(--border)' : undefined,
-                  }}
-                >
-                  <td className="px-5 py-3" style={{ color: 'var(--text)' }}>
-                    {row.productTitle}
-                  </td>
-                  <td className="px-5 py-3 font-mono" style={{ color: 'var(--accent)' }}>{row.variantTitle}</td>
-                  <td className="px-5 py-3">
-                    {row.isFirstOfProduct && (
-                      <span className="px-2 py-0.5 rounded" style={{
-                        background: row.productStatus === 'ACTIVE' ? 'var(--accent-bg)' : 'var(--neutral-bg)',
-                        color: row.productStatus === 'ACTIVE' ? 'var(--accent)' : 'var(--muted)'
-                      }}>
-                        {row.productStatus}
-                      </span>
-                    )}
-                  </td>
-                  <td className="px-5 py-3">
-                    <input
-                      type="text"
-                      value={row.eta}
-                      onChange={e => updateRow(row.variantId, 'eta', e.target.value)}
-                      placeholder="e.g. 2-3 weeks"
-                      className="px-2 py-1 rounded text-xs w-32 outline-none"
-                      style={{ background: 'var(--bg)', border: '1px solid var(--input-border)', color: 'var(--text)' }}
-                    />
-                  </td>
-                  <td className="px-5 py-3">
-                    <input
-                      type="text"
-                      value={row.etaNote}
-                      onChange={e => updateRow(row.variantId, 'etaNote', e.target.value)}
-                      placeholder="Additional note..."
-                      className="px-2 py-1 rounded text-xs w-48 outline-none"
-                      style={{ background: 'var(--bg)', border: '1px solid var(--input-border)', color: 'var(--text)' }}
-                    />
-                  </td>
-                  <td className="px-5 py-3">
-                    <button
-                      onClick={() => saveRow(row.variantId)}
-                      disabled={row.saving}
-                      className="flex items-center gap-1 px-3 py-1 rounded text-xs tracking-widest uppercase transition-colors"
-                      style={{
-                        background: row.saved ? 'var(--accent-border)' : 'var(--accent-bg)',
-                        border: '1px solid var(--accent)',
-                        color: 'var(--accent)',
-                      }}
-                    >
-                      <Save size={11} />
-                      {row.saving ? 'SAVING...' : row.saved ? 'SAVED' : 'SAVE'}
-                    </button>
-                  </td>
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs">
+              <thead>
+                <tr style={{ borderBottom: '1px solid var(--border)' }}>
+                  {sh('PRODUCT', 'productTitle')}
+                  {sh('VARIANT', 'variantTitle')}
+                  {sh('STATUS', 'productStatus')}
+                  {sh('ETA', 'eta')}
+                  <th className="text-left px-5 py-3 tracking-widest" style={{ color: 'var(--muted-2)' }}>ETA NOTE</th>
+                  {sh('MATERIAL (g)', 'materialGrams')}
+                  <th className="text-left px-5 py-3 tracking-widest" style={{ color: 'var(--muted-2)' }}>SAVE</th>
                 </tr>
-              ))}
-              {rows.length === 0 && (
-                <tr>
-                  <td colSpan={6} className="px-5 py-6 text-center" style={{ color: 'var(--muted-2)' }}>
-                    No products found.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {sorted.map(row => (
+                  <tr
+                    key={row.variantId}
+                    style={{
+                      borderBottom: '1px solid var(--border-subtle)',
+                      borderTop: row.isFirstOfProduct ? '1px solid var(--border)' : undefined,
+                    }}
+                  >
+                    <td className="px-5 py-3" style={{ color: 'var(--text)' }}>
+                      {row.productTitle}
+                    </td>
+                    <td className="px-5 py-3 font-mono" style={{ color: 'var(--accent)' }}>{row.variantTitle}</td>
+                    <td className="px-5 py-3">
+                      {row.isFirstOfProduct && (
+                        <span className="px-2 py-0.5 rounded" style={{
+                          background: row.productStatus === 'ACTIVE' ? 'var(--accent-bg)' : 'var(--neutral-bg)',
+                          color: row.productStatus === 'ACTIVE' ? 'var(--accent)' : 'var(--muted)'
+                        }}>
+                          {row.productStatus}
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-5 py-3">
+                      <input
+                        type="text"
+                        value={row.eta}
+                        onChange={e => updateRow(row.variantId, 'eta', e.target.value)}
+                        placeholder="e.g. 2-3 weeks"
+                        className="px-2 py-1 rounded text-xs w-28 outline-none"
+                        style={{ background: 'var(--bg)', border: '1px solid var(--input-border)', color: 'var(--text)' }}
+                      />
+                    </td>
+                    <td className="px-5 py-3">
+                      <input
+                        type="text"
+                        value={row.etaNote}
+                        onChange={e => updateRow(row.variantId, 'etaNote', e.target.value)}
+                        placeholder="Additional note..."
+                        className="px-2 py-1 rounded text-xs w-40 outline-none"
+                        style={{ background: 'var(--bg)', border: '1px solid var(--input-border)', color: 'var(--text)' }}
+                      />
+                    </td>
+                    <td className="px-5 py-3">
+                      <input
+                        type="number"
+                        min="0"
+                        step="1"
+                        value={row.materialGrams}
+                        onChange={e => updateRow(row.variantId, 'materialGrams', e.target.value)}
+                        placeholder="e.g. 420"
+                        className="px-2 py-1 rounded text-xs w-24 outline-none"
+                        style={{ background: 'var(--bg)', border: '1px solid var(--input-border)', color: 'var(--text)' }}
+                      />
+                    </td>
+                    <td className="px-5 py-3">
+                      <button
+                        onClick={() => saveRow(row.variantId)}
+                        disabled={row.saving}
+                        className="flex items-center gap-1 px-3 py-1 rounded text-xs tracking-widest uppercase transition-colors"
+                        style={{
+                          background: row.saved ? 'var(--accent-border)' : 'var(--accent-bg)',
+                          border: '1px solid var(--accent)',
+                          color: 'var(--accent)',
+                        }}
+                      >
+                        <Save size={11} />
+                        {row.saving ? 'SAVING...' : row.saved ? 'SAVED' : 'SAVE'}
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+                {rows.length === 0 && (
+                  <tr>
+                    <td colSpan={7} className="px-5 py-6 text-center" style={{ color: 'var(--muted-2)' }}>
+                      No products found.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
     </div>

@@ -15,7 +15,7 @@ export async function POST(request: NextRequest) {
     // ownerId may be a product or a variant GID. (productId kept for back-compat.)
     const body = await request.json();
     const ownerId: string | undefined = body.ownerId || body.productId || body.variantId;
-    const { eta, etaNote } = body;
+    const { eta, etaNote, materialGrams } = body;
 
     if (!ownerId) {
       return NextResponse.json({ error: 'ownerId is required' }, { status: 400 });
@@ -27,6 +27,9 @@ export async function POST(request: NextRequest) {
     }
     if (etaNote !== undefined) {
       metafields.push({ ownerId, namespace: 'custom', key: 'eta_note', value: etaNote, type: 'single_line_text_field' });
+    }
+    if (materialGrams !== undefined) {
+      metafields.push({ ownerId, namespace: 'custom', key: 'material_grams', value: String(materialGrams || 0), type: 'number_decimal' });
     }
 
     const data = await shopifyFetch(SET_METAFIELDS, { metafields });
