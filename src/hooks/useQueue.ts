@@ -1,11 +1,12 @@
 'use client';
 import { useCallback, useEffect, useState } from 'react';
 
-export type Stage = 'PRINT' | 'PAINT' | 'READY' | 'SHIPPED';
-export const STAGES: Stage[] = ['PRINT', 'PAINT', 'READY', 'SHIPPED'];
+export type Stage = 'PRINT' | 'PAINT' | 'DECALS' | 'READY' | 'SHIPPED';
+export const STAGES: Stage[] = ['PRINT', 'PAINT', 'DECALS', 'READY', 'SHIPPED'];
 export const STAGE_LABELS: Record<Stage, string> = {
   PRINT: 'PRINT',
   PAINT: 'PAINT',
+  DECALS: 'DECALS',
   READY: 'READY TO SHIP',
   SHIPPED: 'SHIPPED',
 };

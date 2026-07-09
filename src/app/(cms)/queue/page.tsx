@@ -85,7 +85,7 @@ export default function QueuePage() {
   const { items, loading, error, setStage } = useQueue();
 
   const byStage = useMemo(() => {
-    const map: Record<Stage, QueueItem[]> = { PRINT: [], PAINT: [], READY: [], SHIPPED: [] };
+    const map: Record<Stage, QueueItem[]> = { PRINT: [], PAINT: [], DECALS: [], READY: [], SHIPPED: [] };
     items.forEach(i => map[i.stage].push(i));
     // Within a column, sort by ship-by urgency (soonest first).
     STAGES.forEach(s => map[s].sort((a, b) => {
@@ -111,12 +111,12 @@ export default function QueuePage() {
       )}
 
       {!loading && !error && (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-4">
           {STAGES.map(stage => (
-            <div key={stage} className="rounded-lg" style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
-              <div className="px-4 py-3 border-b flex items-center justify-between" style={{ borderColor: 'var(--border)' }}>
-                <span className="text-xs font-bold tracking-widest uppercase" style={{ color: 'var(--muted)' }}>{STAGE_LABELS[stage]}</span>
-                <span className="text-xs font-mono px-2 py-0.5 rounded" style={{ background: 'var(--neutral-bg)', color: 'var(--muted)' }}>
+            <div key={stage} className="rounded-lg overflow-hidden" style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
+              <div className="px-4 py-4 border-b flex items-center justify-between" style={{ borderColor: 'var(--border)', background: 'var(--surface-2)' }}>
+                <span className="text-base font-bold tracking-widest uppercase" style={{ color: 'var(--text)' }}>{STAGE_LABELS[stage]}</span>
+                <span className="text-base font-mono font-bold px-2.5 py-0.5 rounded-full min-w-[2rem] text-center" style={{ background: 'var(--accent-bg)', color: 'var(--accent)' }}>
                   {byStage[stage].length}
                 </span>
               </div>
