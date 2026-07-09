@@ -80,6 +80,7 @@ export const PRODUCTS_QUERY = `
           status
           productType
           tags
+          featuredImage { url altText }
           variants(first: 10) {
             edges {
               node {
