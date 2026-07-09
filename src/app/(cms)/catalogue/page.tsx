@@ -1,7 +1,7 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { formatPKR } from '@/lib/utils';
-import { Save, Package } from 'lucide-react';
+import { Save, Package, X } from 'lucide-react';
 
 interface Metafield { namespace: string; key: string; value: string }
 interface Variant {
@@ -45,6 +45,8 @@ export default function CataloguePage() {
   const [groups, setGroups] = useState<ProductGroup[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState('ALL');
+  const [categoryFilter, setCategoryFilter] = useState('ALL');
 
   useEffect(() => { fetchCatalogue(); }, []);
 
@@ -121,9 +123,30 @@ export default function CataloguePage() {
     }
   }
 
-  const visible = groups.filter(g =>
-    !filter || g.title.toLowerCase().includes(filter.toLowerCase()) || g.productType.toLowerCase().includes(filter.toLowerCase())
-  );
+  const categories = useMemo(() => {
+    const set = new Set(groups.map(g => g.productType).filter(Boolean));
+    return Array.from(set).sort();
+  }, [groups]);
+
+  const visible = groups.filter(g => {
+    if (statusFilter !== 'ALL' && g.status !== statusFilter) return false;
+    if (categoryFilter !== 'ALL' && g.productType !== categoryFilter) return false;
+    if (filter && !g.title.toLowerCase().includes(filter.toLowerCase()) && !g.productType.toLowerCase().includes(filter.toLowerCase())) return false;
+    return true;
+  });
+
+  const hasActiveFilters = filter !== '' || statusFilter !== 'ALL' || categoryFilter !== 'ALL';
+  function clearFilters() {
+    setFilter('');
+    setStatusFilter('ALL');
+    setCategoryFilter('ALL');
+  }
+
+  const selectStyle = {
+    background: 'var(--surface)',
+    border: '1px solid var(--input-border)',
+    color: 'var(--text)',
+  };
 
   return (
     <div>
@@ -132,15 +155,52 @@ export default function CataloguePage() {
           <h1 className="text-xl font-bold tracking-widest uppercase txt-heading">CATALOGUE</h1>
           <p className="text-xs mt-1 tracking-widest" style={{ color: 'var(--muted-2)' }}>FULL PRODUCT SPEC SHEET — IMAGE, VARIANTS, DIMENSIONS, ETA, MATERIAL</p>
         </div>
-        <input
-          type="text"
-          value={filter}
-          onChange={e => setFilter(e.target.value)}
-          placeholder="Filter by product name or type..."
-          className="px-3 py-2 rounded text-xs outline-none w-64"
-          style={{ background: 'var(--surface)', border: '1px solid var(--input-border)', color: 'var(--text)' }}
-        />
+        <div className="flex items-center gap-2 flex-wrap">
+          <input
+            type="text"
+            value={filter}
+            onChange={e => setFilter(e.target.value)}
+            placeholder="Search product name..."
+            className="px-3 py-2 rounded text-xs outline-none w-56"
+            style={selectStyle}
+          />
+          <select
+            value={statusFilter}
+            onChange={e => setStatusFilter(e.target.value)}
+            className="px-3 py-2 rounded text-xs outline-none"
+            style={selectStyle}
+          >
+            <option value="ALL">ALL STATUS</option>
+            <option value="ACTIVE">ACTIVE</option>
+            <option value="DRAFT">DRAFT</option>
+            <option value="ARCHIVED">ARCHIVED</option>
+          </select>
+          <select
+            value={categoryFilter}
+            onChange={e => setCategoryFilter(e.target.value)}
+            className="px-3 py-2 rounded text-xs outline-none"
+            style={selectStyle}
+          >
+            <option value="ALL">ALL CATEGORIES</option>
+            {categories.map(c => <option key={c} value={c}>{c}</option>)}
+          </select>
+          {hasActiveFilters && (
+            <button
+              onClick={clearFilters}
+              className="flex items-center gap-1 px-2 py-2 rounded text-xs tracking-widest uppercase"
+              style={{ color: 'var(--muted-2)' }}
+            >
+              <X size={12} /> CLEAR
+            </button>
+          )}
+        </div>
       </div>
+
+      {!loading && (
+        <div className="text-xs mb-4 tracking-widest" style={{ color: 'var(--muted-2)' }}>
+          {visible.length} of {groups.length} products
+        </div>
+      )}
 
       {loading ? (
         <div className="text-xs tracking-widest" style={{ color: 'var(--muted-2)' }}>LOADING CATALOGUE...</div>
