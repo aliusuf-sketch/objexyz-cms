@@ -138,15 +138,17 @@ export default function DashboardPage() {
   }, [orders]);
 
   // ── Items fulfilled in selected period ──────────────────────────
+  // Follows Shopify's order-level fulfillmentStatus only (manually set by
+  // the manager) — an order counts as fulfilled only when Shopify says
+  // FULFILLED, not per-line-item fulfillableQuantity math.
   const periodStat = useMemo(() => {
     const cutoff = Date.now() - periodDays * 24 * 60 * 60 * 1000;
     let ordered = 0, fulfilledQty = 0;
     orders.forEach(o => {
       if (new Date(o.createdAt).getTime() < cutoff) return;
-      o.lineItems?.edges?.forEach(({ node }) => {
-        ordered += node.quantity;
-        fulfilledQty += Math.max(0, node.quantity - (node.fulfillableQuantity ?? node.quantity));
-      });
+      const orderQty = o.lineItems?.edges?.reduce((s, e) => s + e.node.quantity, 0) || 0;
+      ordered += orderQty;
+      if (o.fulfillmentStatus === 'FULFILLED') fulfilledQty += orderQty;
     });
     return { ordered, fulfilledQty, pct: ordered > 0 ? Math.round((fulfilledQty / ordered) * 100) : 0 };
   }, [orders, periodDays]);
