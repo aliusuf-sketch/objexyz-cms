@@ -158,7 +158,9 @@ export const DASHBOARD_QUERY = `
               node {
                 title
                 quantity
+                fulfillableQuantity
                 variant { price }
+                product { productType }
               }
             }
           }

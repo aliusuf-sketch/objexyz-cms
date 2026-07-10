@@ -6,7 +6,7 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 export function formatPKR(amount: string | number) {
-  return `PKR ${Number(amount).toLocaleString('en-PK', { minimumFractionDigits: 0 })}`;
+  return `PKR ${Math.round(Number(amount)).toLocaleString('en-PK', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
 }
 
 export function formatDate(dateStr: string) {
