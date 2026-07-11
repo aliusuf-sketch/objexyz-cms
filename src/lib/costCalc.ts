@@ -94,8 +94,21 @@ export interface CostBreakdown {
   marginPct: number;
 }
 
-// Exact formula per spec — do not alter.
-export function calcCost(usage: UsageInput, rates: CostRates, sellingPrice: number): CostBreakdown {
+export interface UnitCost {
+  materialCost: number;
+  laborCost: number;
+  equipmentCost: number;
+  subtotal: number;
+  failureCost: number;
+  // Everything except courier — courier is PKR/order, not PKR/unit, so it
+  // must be added once per order (see calcCost / monthly P&L), never
+  // multiplied by quantity.
+  costExclCourier: number;
+}
+
+// Per-unit cost, excluding the per-order courier fee. Exact formula per
+// spec — do not alter.
+export function calcUnitCost(usage: UsageInput, rates: CostRates): UnitCost {
   const { printerPerHr, elecPerHr } = deriveRates(rates);
 
   const materialCost =
@@ -113,10 +126,17 @@ export function calcCost(usage: UsageInput, rates: CostRates, sellingPrice: numb
 
   const subtotal = materialCost + laborCost + equipmentCost;
   const failureCost = subtotal * (rates.failureRatePct / 100);
-  const totalCost = subtotal + failureCost + rates.courierCost;
 
+  return { materialCost, laborCost, equipmentCost, subtotal, failureCost, costExclCourier: subtotal + failureCost };
+}
+
+// Full per-item cost including courier — for a single item/quote where
+// "courier per order" and "courier per item" are the same thing (one item,
+// one shipment). Exact formula per spec — do not alter.
+export function calcCost(usage: UsageInput, rates: CostRates, sellingPrice: number): CostBreakdown {
+  const u = calcUnitCost(usage, rates);
+  const totalCost = u.costExclCourier + rates.courierCost;
   const profit = sellingPrice - totalCost;
   const marginPct = sellingPrice > 0 ? (profit / sellingPrice) * 100 : 0;
-
-  return { materialCost, laborCost, equipmentCost, subtotal, failureCost, totalCost, profit, marginPct };
+  return { ...u, totalCost, profit, marginPct };
 }

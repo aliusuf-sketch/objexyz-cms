@@ -191,6 +191,7 @@ export const QUEUE_QUERY = `
                 variant {
                   id
                   title
+                  price
                 }
                 product {
                   id

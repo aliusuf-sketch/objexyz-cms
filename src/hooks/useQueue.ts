@@ -11,6 +11,16 @@ export const STAGE_LABELS: Record<Stage, string> = {
   SHIPPED: 'SHIPPED',
 };
 
+interface RawVariantLocal {
+  eta?: string;
+  materialGrams?: string;
+  resinMl?: number;
+  printerRuntimeHrs?: number;
+  sandingHrs?: number;
+  paintingHrs?: number;
+  finishingHrs?: number;
+  packagingHrs?: number;
+}
 interface RawLineItem {
   id: string;
   title: string;
@@ -18,7 +28,8 @@ interface RawLineItem {
   variant?: {
     id: string;
     title: string;
-    local?: { eta?: string; materialGrams?: string } | null;
+    price: string;
+    local?: RawVariantLocal | null;
   } | null;
   product?: { id: string; featuredImage?: { url: string; altText?: string } | null } | null;
 }
@@ -42,11 +53,21 @@ export interface QueueItem {
   customer: string;
   productId: string;
   productTitle: string;
+  variantId: string;
   variantTitle: string;
   quantity: number;
+  price: number;
   imageUrl?: string;
   eta?: string;
   grams: number;
+  usage: {
+    resinMl: number;
+    printerRuntimeHrs: number;
+    sandingHrs: number;
+    paintingHrs: number;
+    finishingHrs: number;
+    packagingHrs: number;
+  };
   fulfillmentStatus: string;
   financialStatus: string;
   stage: Stage;
@@ -80,11 +101,21 @@ export function useQueue() {
               customer: o.customer ? `${o.customer.firstName} ${o.customer.lastName}`.trim() : 'Guest',
               productId: li.product?.id || '',
               productTitle: li.title,
+              variantId: li.variant?.id || '',
               variantTitle: li.variant?.title || '',
               quantity: li.quantity,
+              price: Number(li.variant?.price || 0),
               imageUrl: li.product?.featuredImage?.url,
               eta: li.variant?.local?.eta || undefined,
               grams: Number(li.variant?.local?.materialGrams || 0),
+              usage: {
+                resinMl: li.variant?.local?.resinMl || 0,
+                printerRuntimeHrs: li.variant?.local?.printerRuntimeHrs || 0,
+                sandingHrs: li.variant?.local?.sandingHrs || 0,
+                paintingHrs: li.variant?.local?.paintingHrs || 0,
+                finishingHrs: li.variant?.local?.finishingHrs || 0,
+                packagingHrs: li.variant?.local?.packagingHrs || 0,
+              },
               fulfillmentStatus: o.fulfillmentStatus || 'UNFULFILLED',
               financialStatus: o.financialStatus || '',
               stage: stages[li.id] || defaultStage,
