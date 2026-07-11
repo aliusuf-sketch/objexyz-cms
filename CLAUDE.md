@@ -21,11 +21,19 @@ GraphQL API, deployed on Vercel. Repo: `objexyz-cms`.
    dedicated `/api/shopify/*` routes.
 2. **CMS-owned database (Upstash Redis)** — internal-only operational data
    that does NOT need to live in Shopify: per-variant **ETA**, **material
-   grams**, **dimensions**, and per-order **production stages**
-   (Print → Paint → Decals → Ready to Ship → Shipped). See `src/lib/db.ts`.
-   Two JSON documents (`variant_data`, `order_stages`) — the catalogue is
-   small (tens of products), so one doc beats scanning many keys.
-   Read/write via `/api/local/variant` and `/api/local/stage`.
+   grams**, **dimensions**, **cost-calculator usage** (resin ml, printer/
+   sanding/painting/finishing/packaging hours), per-order **production
+   stages** (Print → Paint → Decals → Ready to Ship → Shipped), and a
+   studio-wide **cost rates** record. See `src/lib/db.ts`. Three JSON
+   documents (`variant_data`, `order_stages`, `cost_rates`) — the catalogue
+   is small (tens of products), so one doc per concern beats scanning many
+   keys. Read/write via `/api/local/variant`, `/api/local/stage`, and
+   `/api/local/rates`.
+   `CostRates`/`DEFAULT_COST_RATES`/the cost formula live in
+   `src/lib/costCalc.ts` (client-safe — no Redis import) so both the
+   Cost Calculator page and `db.ts` can use them without leaking the
+   server-only Redis client into a client bundle. Never move those back
+   into `db.ts`.
 
 **Do not write ETA/material/dimensions/stages back to Shopify metafields.**
 That was the original design and it was replaced — Shopify metafield writes
@@ -62,6 +70,7 @@ needed, but shouldn't be the default path.
 | `/production` | Production Planning — paid+unshipped items grouped by product+variant, with unit/order/material totals |
 | `/queue` | Shipping Queue — kanban board, 5 stages: Print → Paint → Decals → Ready to Ship → Shipped |
 | `/catalogue` | Full spec sheet — image, variants, price, dimensions, ETA, material grams, all editable inline |
+| `/cost-calculator` | Cost Rates (materials/labor/equipment/fulfillment) + per-variant usage → live cost/profit/margin per product, plus a single-item quote calculator |
 | `/products` | Product table — status toggle, variant prices, ETA summary |
 | `/orders` | Order list — expandable line items |
 | `/analytics` | ShopifyQL — revenue/sessions/top products |
