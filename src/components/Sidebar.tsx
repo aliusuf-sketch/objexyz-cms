@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import {
   LayoutDashboard, Package, ShoppingCart, BarChart2,
-  Clock, PlusCircle, LogOut, Factory, ListChecks, BookOpen
+  Clock, PlusCircle, LogOut, Factory, ListChecks, BookOpen, Calculator
 } from 'lucide-react';
 import ThemeToggle from './ThemeToggle';
 
@@ -12,6 +12,7 @@ const navItems = [
   { href: '/production', label: 'PRODUCTION', icon: Factory },
   { href: '/queue', label: 'SHIPPING QUEUE', icon: ListChecks },
   { href: '/catalogue', label: 'CATALOGUE', icon: BookOpen },
+  { href: '/cost-calculator', label: 'COST CALCULATOR', icon: Calculator },
   { href: '/products', label: 'PRODUCTS', icon: Package },
   { href: '/orders', label: 'ORDERS', icon: ShoppingCart },
   { href: '/analytics', label: 'ANALYTICS', icon: BarChart2 },
