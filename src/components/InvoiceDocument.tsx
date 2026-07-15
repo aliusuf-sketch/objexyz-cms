@@ -26,6 +26,7 @@ const styles = StyleSheet.create({
   page: { padding: 40, fontSize: 9, fontFamily: 'Helvetica', color: '#1a1a1a' },
   headerRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 24 },
   wordmark: { fontSize: 16, fontWeight: 700, letterSpacing: 1 },
+  wordmarkSub: { fontSize: 8, letterSpacing: 2, color: '#666666', marginTop: 2, textTransform: 'uppercase' },
   companyName: { fontSize: 10, fontWeight: 700, marginTop: 8 },
   addressLine: { fontSize: 9, color: '#444444', marginTop: 1 },
   invoiceTitle: { fontSize: 26, textAlign: 'right', color: '#1a1a1a' },
@@ -74,6 +75,7 @@ export default function InvoiceDocument({ data }: { data: InvoiceData }) {
         <View style={styles.headerRow}>
           <View>
             <Text style={styles.wordmark}>OBJEXYZ</Text>
+            <Text style={styles.wordmarkSub}>Studio</Text>
             <Text style={styles.companyName}>{COMPANY.name}</Text>
             {COMPANY.addressLines.map((l, i) => (
               <Text key={i} style={styles.addressLine}>{l}</Text>
