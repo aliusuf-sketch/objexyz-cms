@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useState, useMemo } from 'react';
 import { formatPKR, formatDate } from '@/lib/utils';
-import { ChevronDown, ChevronRight, FileDown } from 'lucide-react';
+import { ChevronDown, ChevronRight, FileDown, Sheet } from 'lucide-react';
 import SortableHeader from '@/components/SortableHeader';
 import { useSortable } from '@/hooks/useSortable';
 import type { InvoiceData } from '@/components/InvoiceDocument';
@@ -34,6 +34,9 @@ export default function OrdersPage() {
   const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState<string | null>(null);
   const [generating, setGenerating] = useState<string | null>(null);
+  const [periodType, setPeriodType] = useState<'7d' | '30d' | '90d' | '180d' | 'custom'>('30d');
+  const [customDays, setCustomDays] = useState(30);
+  const [exportingXlsx, setExportingXlsx] = useState(false);
 
   useEffect(() => {
     fetch('/api/shopify/orders')
@@ -97,6 +100,56 @@ export default function OrdersPage() {
     }
   }
 
+  const PERIOD_DAYS: Record<Exclude<typeof periodType, 'custom'>, number> = { '7d': 7, '30d': 30, '90d': 90, '180d': 180 };
+  const periodDays = periodType === 'custom' ? customDays : PERIOD_DAYS[periodType];
+  const periodLabel = periodType === 'custom' ? `${customDays}d` : periodType;
+
+  async function exportExcel() {
+    setExportingXlsx(true);
+    try {
+      const { Workbook } = await import('exceljs');
+      const cutoff = Date.now() - periodDays * 24 * 60 * 60 * 1000;
+      const filtered = orders
+        .filter(o => new Date(o.createdAt).getTime() >= cutoff)
+        .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+
+      const wb = new Workbook();
+      const ws = wb.addWorksheet('Orders');
+      ws.columns = [
+        { header: 'Order No', key: 'orderNo', width: 14 },
+        { header: 'Date', key: 'date', width: 14 },
+        { header: 'No of Items', key: 'items', width: 14 },
+        { header: 'Total Amount (PKR)', key: 'amount', width: 20 },
+      ];
+      ws.getRow(1).font = { bold: true };
+
+      let totalItems = 0, totalAmount = 0;
+      filtered.forEach(o => {
+        const items = o.lineItems?.edges?.reduce((s, e) => s + e.node.quantity, 0) || 0;
+        const amount = Number(o.totalPriceSet?.shopMoney?.amount || 0);
+        totalItems += items;
+        totalAmount += amount;
+        ws.addRow({ orderNo: o.name, date: formatDate(o.createdAt), items, amount });
+      });
+
+      ws.addRow({});
+      const totalRow = ws.addRow({ orderNo: 'TOTAL', items: totalItems, amount: totalAmount });
+      totalRow.font = { bold: true };
+      ws.getColumn('amount').numFmt = '#,##0';
+
+      const buffer = await wb.xlsx.writeBuffer();
+      const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `objexyz-orders-${periodLabel}.xlsx`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } finally {
+      setExportingXlsx(false);
+    }
+  }
+
   const statusStyle = (status: string, type: 'financial' | 'fulfillment') => {
     if (type === 'financial') {
       const map: Record<string, { bg: string; color: string }> = {
@@ -127,9 +180,43 @@ export default function OrdersPage() {
 
   return (
     <div>
-      <div className="mb-8">
-        <h1 className="text-xl font-bold tracking-widest uppercase txt-heading">ORDERS</h1>
-        <p className="text-xs mt-1 tracking-widest" style={{ color: 'var(--muted-2)' }}>ALL ORDERS FROM 2026-05-09</p>
+      <div className="mb-8 flex items-end justify-between flex-wrap gap-4">
+        <div>
+          <h1 className="text-xl font-bold tracking-widest uppercase txt-heading">ORDERS</h1>
+          <p className="text-xs mt-1 tracking-widest" style={{ color: 'var(--muted-2)' }}>ALL ORDERS FROM 2026-05-09</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <select
+            value={periodType}
+            onChange={e => setPeriodType(e.target.value as typeof periodType)}
+            className="px-2 py-2 rounded text-xs outline-none"
+            style={{ background: 'var(--surface)', border: '1px solid var(--input-border)', color: 'var(--text)' }}
+          >
+            <option value="7d">LAST 7 DAYS</option>
+            <option value="30d">LAST 1 MONTH</option>
+            <option value="90d">LAST 3 MONTHS</option>
+            <option value="180d">LAST 6 MONTHS</option>
+            <option value="custom">CUSTOM DAYS</option>
+          </select>
+          {periodType === 'custom' && (
+            <input
+              type="number"
+              min={1}
+              value={customDays}
+              onChange={e => setCustomDays(Number(e.target.value) || 1)}
+              className="px-2 py-2 rounded text-xs outline-none w-16"
+              style={{ background: 'var(--surface)', border: '1px solid var(--input-border)', color: 'var(--text)' }}
+            />
+          )}
+          <button
+            onClick={exportExcel}
+            disabled={exportingXlsx || loading}
+            className="flex items-center gap-1.5 px-3 py-2 rounded text-xs tracking-widest uppercase"
+            style={{ border: '1px solid var(--accent)', color: 'var(--accent)' }}
+          >
+            <Sheet size={12} /> {exportingXlsx ? 'EXPORTING...' : 'EXPORT XLSX'}
+          </button>
+        </div>
       </div>
 
       {loading ? (
