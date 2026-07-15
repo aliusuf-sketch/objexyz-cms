@@ -118,6 +118,7 @@ export default function OrdersPage() {
       ws.columns = [
         { header: 'Order No', key: 'orderNo', width: 14 },
         { header: 'Date', key: 'date', width: 14 },
+        { header: 'Customer Name', key: 'customer', width: 24 },
         { header: 'No of Items', key: 'items', width: 14 },
         { header: 'Total Amount (PKR)', key: 'amount', width: 20 },
       ];
@@ -127,9 +128,10 @@ export default function OrdersPage() {
       filtered.forEach(o => {
         const items = o.lineItems?.edges?.reduce((s, e) => s + e.node.quantity, 0) || 0;
         const amount = Number(o.totalPriceSet?.shopMoney?.amount || 0);
+        const customer = o.customer ? `${o.customer.firstName} ${o.customer.lastName}`.trim() : 'Guest';
         totalItems += items;
         totalAmount += amount;
-        ws.addRow({ orderNo: o.name, date: formatDate(o.createdAt), items, amount });
+        ws.addRow({ orderNo: o.name, date: formatDate(o.createdAt), customer, items, amount });
       });
 
       ws.addRow({});
