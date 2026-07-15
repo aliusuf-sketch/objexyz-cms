@@ -1,11 +1,12 @@
 'use client';
 import { useEffect, useState, useMemo } from 'react';
 import { formatPKR, formatDate } from '@/lib/utils';
-import { ChevronDown, ChevronRight } from 'lucide-react';
+import { ChevronDown, ChevronRight, FileDown } from 'lucide-react';
 import SortableHeader from '@/components/SortableHeader';
 import { useSortable } from '@/hooks/useSortable';
+import type { InvoiceData } from '@/components/InvoiceDocument';
 
-interface LineItem { title: string; quantity: number; variant?: { price: string } }
+interface LineItem { title: string; quantity: number; variant?: { title?: string; price: string } }
 interface Order {
   id: string;
   name: string;
@@ -32,6 +33,7 @@ export default function OrdersPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState<string | null>(null);
+  const [generating, setGenerating] = useState<string | null>(null);
 
   useEffect(() => {
     fetch('/api/shopify/orders')
@@ -58,6 +60,41 @@ export default function OrdersPage() {
 
   function toggleExpand(id: string) {
     setExpanded(prev => prev === id ? null : id);
+  }
+
+  async function downloadInvoice(row: OrderRow, e: React.MouseEvent) {
+    e.stopPropagation();
+    setGenerating(row.id);
+    try {
+      const [{ pdf }, { default: InvoiceDocument }] = await Promise.all([
+        import('@react-pdf/renderer'),
+        import('@/components/InvoiceDocument'),
+      ]);
+      const invoiceNumber = `INV-${row.name.replace('#', '')}`;
+      const data: InvoiceData = {
+        invoiceNumber,
+        orderName: row.name,
+        invoiceDate: formatDate(row.createdAt),
+        customerName: row.customer,
+        customerEmail: row._raw.customer?.email,
+        currency: row._raw.totalPriceSet?.shopMoney?.currencyCode || 'PKR',
+        lineItems: (row._raw.lineItems?.edges || []).map(({ node }) => ({
+          title: node.title,
+          variantTitle: node.variant?.title,
+          quantity: node.quantity,
+          rate: Number(node.variant?.price || 0),
+        })),
+      };
+      const blob = await pdf(<InvoiceDocument data={data} />).toBlob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${invoiceNumber}.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } finally {
+      setGenerating(null);
+    }
   }
 
   const statusStyle = (status: string, type: 'financial' | 'fulfillment') => {
@@ -109,6 +146,7 @@ export default function OrdersPage() {
                 {sh('FINANCIAL', 'financialStatus')}
                 {sh('FULFILLMENT', 'fulfillmentStatus')}
                 {sh('AMOUNT', 'amount')}
+                <th className="text-left px-4 py-3 tracking-widest" style={{ color: 'var(--muted-2)' }}>INVOICE</th>
               </tr>
             </thead>
             <tbody>
@@ -143,10 +181,21 @@ export default function OrdersPage() {
                     <td className="px-4 py-3 font-mono" style={{ color: 'var(--text)' }}>
                       {formatPKR(row.amount)}
                     </td>
+                    <td className="px-4 py-3">
+                      <button
+                        onClick={e => downloadInvoice(row, e)}
+                        disabled={generating === row.id}
+                        className="flex items-center gap-1 px-2.5 py-1 rounded text-xs tracking-widest uppercase transition-colors"
+                        style={{ border: '1px solid var(--accent)', color: 'var(--accent)' }}
+                      >
+                        <FileDown size={11} />
+                        {generating === row.id ? '...' : 'PDF'}
+                      </button>
+                    </td>
                   </tr>
                   {expanded === row.id && (
                     <tr key={`${row.id}-detail`} style={{ background: 'var(--surface-2)', borderBottom: '1px solid var(--border)' }}>
-                      <td colSpan={7} className="px-8 py-4">
+                      <td colSpan={8} className="px-8 py-4">
                         <div className="text-xs mb-2 tracking-widest uppercase" style={{ color: 'var(--muted-2)' }}>Line Items</div>
                         {row._raw.lineItems?.edges?.map(({ node }, i) => (
                           <div key={i} className="flex justify-between py-1" style={{ color: 'var(--muted)' }}>

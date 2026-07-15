@@ -123,6 +123,7 @@ export const ORDERS_QUERY = `
                 title
                 quantity
                 variant {
+                  title
                   price
                 }
               }
