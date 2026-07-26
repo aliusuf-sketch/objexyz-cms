@@ -1,14 +1,21 @@
 import { NextResponse } from 'next/server';
 import { shopifyFetch, QUEUE_QUERY } from '@/lib/shopify';
-import { getAllVariantData, getAllOrderStages } from '@/lib/db';
+import { getAllVariantData, getAllOrderStages, VariantDataMap, OrderStagesMap } from '@/lib/db';
 
 export async function GET() {
   try {
-    const [data, variantData, orderStages] = await Promise.all([
-      shopifyFetch(QUEUE_QUERY, { ordersQuery: 'created_at:>2026-05-09' }),
-      getAllVariantData(),
-      getAllOrderStages(),
-    ]);
+    const data = await shopifyFetch(QUEUE_QUERY, { ordersQuery: 'created_at:>2026-05-09' });
+
+    // Same principle as /api/shopify/products: CMS-local overlays
+    // (production stages, per-variant usage) must never take down real
+    // Shopify order data if Redis is unreachable/misconfigured.
+    let variantData: VariantDataMap = {};
+    let orderStages: OrderStagesMap = {};
+    try {
+      [variantData, orderStages] = await Promise.all([getAllVariantData(), getAllOrderStages()]);
+    } catch (err) {
+      console.error('CMS local data fetch failed, continuing without overlay:', err);
+    }
 
     const edges = data?.data?.orders?.edges;
     if (Array.isArray(edges)) {
