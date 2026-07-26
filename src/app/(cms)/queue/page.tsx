@@ -2,6 +2,7 @@
 import { useMemo } from 'react';
 import { formatDate, shipByDate, daysUntil } from '@/lib/utils';
 import { useQueue, STAGES, STAGE_LABELS, QueueItem, Stage } from '@/hooks/useQueue';
+import LocalDataWarning from '@/components/LocalDataWarning';
 import { ChevronLeft, ChevronRight, Package } from 'lucide-react';
 
 function ShipBy({ item }: { item: QueueItem }) {
@@ -82,7 +83,7 @@ function Card({ item, onMove }: { item: QueueItem; onMove: (i: QueueItem, s: Sta
 }
 
 export default function QueuePage() {
-  const { items, loading, error, setStage } = useQueue();
+  const { items, loading, error, localWarning, setStage } = useQueue();
 
   const byStage = useMemo(() => {
     const map: Record<Stage, QueueItem[]> = { PRINT: [], PAINT: [], DECALS: [], READY: [], SHIPPED: [] };
@@ -109,6 +110,7 @@ export default function QueuePage() {
           {error}
         </div>
       )}
+      {!loading && localWarning && <LocalDataWarning />}
 
       {!loading && !error && (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-4">

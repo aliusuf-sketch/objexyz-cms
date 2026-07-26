@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { Save } from 'lucide-react';
 import SortableHeader from '@/components/SortableHeader';
 import { useSortable } from '@/hooks/useSortable';
+import LocalDataWarning from '@/components/LocalDataWarning';
 
 interface LocalData { eta?: string; etaNote?: string; materialGrams?: string; dimensions?: string }
 interface Variant {
@@ -34,11 +35,13 @@ interface ETARow {
 export default function ETAManagerPage() {
   const [rows, setRows] = useState<ETARow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [localWarning, setLocalWarning] = useState(false);
 
   useEffect(() => {
     fetch('/api/shopify/products')
       .then(r => r.json())
       .then(data => {
+        if (data.localDataError) setLocalWarning(true);
         const edges = data?.data?.products?.edges || [];
         const products: Product[] = edges.map((e: { node: Product }) => e.node);
         const flat: ETARow[] = [];
@@ -106,6 +109,8 @@ export default function ETAManagerPage() {
       {loading ? (
         <div className="text-xs tracking-widest" style={{ color: 'var(--muted-2)' }}>LOADING PRODUCT DATA...</div>
       ) : (
+        <>
+        {localWarning && <LocalDataWarning />}
         <div className="rounded-lg overflow-hidden" style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
           <div className="overflow-x-auto">
             <table className="w-full text-xs">
@@ -203,6 +208,7 @@ export default function ETAManagerPage() {
             </table>
           </div>
         </div>
+        </>
       )}
     </div>
   );

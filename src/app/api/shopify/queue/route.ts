@@ -11,9 +11,11 @@ export async function GET() {
     // Shopify order data if Redis is unreachable/misconfigured.
     let variantData: VariantDataMap = {};
     let orderStages: OrderStagesMap = {};
+    let localDataError = false;
     try {
       [variantData, orderStages] = await Promise.all([getAllVariantData(), getAllOrderStages()]);
     } catch (err) {
+      localDataError = true;
       console.error('CMS local data fetch failed, continuing without overlay:', err);
     }
 
@@ -34,7 +36,7 @@ export async function GET() {
         }
       }
     }
-    return NextResponse.json(data);
+    return NextResponse.json({ ...data, localDataError });
   } catch (err) {
     return NextResponse.json({ error: String(err) }, { status: 500 });
   }

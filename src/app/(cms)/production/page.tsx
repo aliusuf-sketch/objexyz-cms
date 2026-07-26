@@ -3,6 +3,7 @@ import { useMemo } from 'react';
 import { useQueue, QueueItem } from '@/hooks/useQueue';
 import SortableHeader from '@/components/SortableHeader';
 import { useSortable } from '@/hooks/useSortable';
+import LocalDataWarning from '@/components/LocalDataWarning';
 import { Package } from 'lucide-react';
 
 interface PlanRow {
@@ -22,7 +23,7 @@ function grams(n: number) {
 }
 
 export default function ProductionPage() {
-  const { items, loading, error } = useQueue();
+  const { items, loading, error, localWarning } = useQueue();
 
   const rows: PlanRow[] = useMemo(() => {
     // To-make = everything not yet shipped (paid or pending — made to order).
@@ -67,6 +68,7 @@ export default function ProductionPage() {
           {error}
         </div>
       )}
+      {!loading && localWarning && <LocalDataWarning />}
 
       {!loading && !error && (
         <>

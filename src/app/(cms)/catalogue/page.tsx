@@ -2,6 +2,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { formatPKR } from '@/lib/utils';
 import { Save, Package, X } from 'lucide-react';
+import LocalDataWarning from '@/components/LocalDataWarning';
 
 interface LocalData { eta?: string; etaNote?: string; materialGrams?: string; dimensions?: string }
 interface Variant {
@@ -47,6 +48,7 @@ export default function CataloguePage() {
   const [filter, setFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [categoryFilter, setCategoryFilter] = useState('ALL');
+  const [localWarning, setLocalWarning] = useState(false);
 
   useEffect(() => { fetchCatalogue(); }, []);
 
@@ -55,6 +57,7 @@ export default function CataloguePage() {
     fetch('/api/shopify/products')
       .then(r => r.json())
       .then(data => {
+        if (data.localDataError) setLocalWarning(true);
         const edges = data?.data?.products?.edges || [];
         const products: Product[] = edges.map((e: { node: Product }) => e.node);
         setGroups(products.map(p => ({
@@ -205,6 +208,8 @@ export default function CataloguePage() {
       {loading ? (
         <div className="text-xs tracking-widest" style={{ color: 'var(--muted-2)' }}>LOADING CATALOGUE...</div>
       ) : (
+        <>
+        {localWarning && <LocalDataWarning />}
         <div className="space-y-4">
           {visible.map(group => (
             <div key={group.productId} className="rounded-lg overflow-hidden" style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
@@ -311,6 +316,7 @@ export default function CataloguePage() {
             <div className="text-xs text-center py-10" style={{ color: 'var(--muted-2)' }}>No products match.</div>
           )}
         </div>
+        </>
       )}
     </div>
   );

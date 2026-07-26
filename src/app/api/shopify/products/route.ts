@@ -11,9 +11,11 @@ export async function GET() {
     // unreachable/misconfigured, never let that take down real Shopify
     // data. Fall back to an empty overlay instead of failing the request.
     let localData: VariantDataMap = {};
+    let localDataError = false;
     try {
       localData = await getAllVariantData();
     } catch (err) {
+      localDataError = true;
       console.error('getAllVariantData failed, continuing without local overlay:', err);
     }
 
@@ -28,7 +30,7 @@ export async function GET() {
         }
       }
     }
-    return NextResponse.json(data);
+    return NextResponse.json({ ...data, localDataError });
   } catch (err) {
     return NextResponse.json({ error: String(err) }, { status: 500 });
   }

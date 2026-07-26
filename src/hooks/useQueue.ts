@@ -78,12 +78,14 @@ export function useQueue() {
   const [orderStages, setOrderStages] = useState<Record<string, Record<string, Stage>>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [localWarning, setLocalWarning] = useState(false);
 
   useEffect(() => {
     fetch('/api/shopify/queue')
       .then(r => r.json())
       .then(data => {
         if (data.error) { setError(data.error); return; }
+        if (data.localDataError) setLocalWarning(true);
         const edges: { node: RawOrder }[] = data?.data?.orders?.edges || [];
         const stagesByOrder: Record<string, Record<string, Stage>> = {};
         const flat: QueueItem[] = [];
@@ -146,5 +148,5 @@ export function useQueue() {
     }
   }, [orderStages]);
 
-  return { items, loading, error, setStage };
+  return { items, loading, error, localWarning, setStage };
 }

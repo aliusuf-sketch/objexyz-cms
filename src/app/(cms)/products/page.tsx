@@ -3,6 +3,7 @@ import { useEffect, useState, useMemo } from 'react';
 import { formatPKR } from '@/lib/utils';
 import SortableHeader from '@/components/SortableHeader';
 import { useSortable } from '@/hooks/useSortable';
+import LocalDataWarning from '@/components/LocalDataWarning';
 
 interface LocalData { eta?: string; etaNote?: string; materialGrams?: string; dimensions?: string }
 interface Variant { id: string; title: string; price: string; local?: LocalData; }
@@ -31,6 +32,7 @@ export default function ProductsPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [toggling, setToggling] = useState<string | null>(null);
+  const [localWarning, setLocalWarning] = useState(false);
 
   useEffect(() => { fetchProducts(); }, []);
 
@@ -39,6 +41,7 @@ export default function ProductsPage() {
     fetch('/api/shopify/products')
       .then(r => r.json())
       .then(data => {
+        if (data.localDataError) setLocalWarning(true);
         const edges = data?.data?.products?.edges || [];
         setProducts(edges.map((e: { node: Product }) => e.node));
       })
@@ -109,7 +112,9 @@ export default function ProductsPage() {
       {loading ? (
         <div className="text-xs tracking-widest" style={{ color: 'var(--muted-2)' }}>LOADING PRODUCT CATALOG...</div>
       ) : (
-        <div className="rounded-lg overflow-hidden" style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
+        <>
+          {localWarning && <LocalDataWarning />}
+          <div className="rounded-lg overflow-hidden" style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
           <div className="overflow-x-auto">
             <table className="w-full text-xs">
               <thead>
@@ -170,6 +175,7 @@ export default function ProductsPage() {
             </table>
           </div>
         </div>
+        </>
       )}
     </div>
   );
