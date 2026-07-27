@@ -1,9 +1,9 @@
 'use client';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { formatDate, shipByDate, daysUntil } from '@/lib/utils';
 import { useQueue, STAGES, STAGE_LABELS, QueueItem, Stage } from '@/hooks/useQueue';
 import LocalDataWarning from '@/components/LocalDataWarning';
-import { ChevronLeft, ChevronRight, Package } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Package, Sheet } from 'lucide-react';
 
 function ShipBy({ item }: { item: QueueItem }) {
   const target = shipByDate(item.createdAt, item.eta);
@@ -84,6 +84,7 @@ function Card({ item, onMove }: { item: QueueItem; onMove: (i: QueueItem, s: Sta
 
 export default function QueuePage() {
   const { items, loading, error, localWarning, setStage } = useQueue();
+  const [exportingXlsx, setExportingXlsx] = useState(false);
 
   const byStage = useMemo(() => {
     const map: Record<Stage, QueueItem[]> = { PRINT: [], PAINT: [], DECALS: [], READY: [], SHIPPED: [] };
@@ -97,11 +98,61 @@ export default function QueuePage() {
     return map;
   }, [items]);
 
+  async function exportExcel() {
+    setExportingXlsx(true);
+    try {
+      const { Workbook } = await import('exceljs');
+      const wb = new Workbook();
+      const ws = wb.addWorksheet('Shipping Queue');
+      ws.columns = [
+        { header: 'Stage', key: 'stage', width: 16 },
+        { header: 'Order #', key: 'orderNo', width: 12 },
+        { header: 'Item', key: 'item', width: 34 },
+        { header: 'Qty', key: 'qty', width: 8 },
+        { header: 'Customer Name', key: 'customer', width: 24 },
+      ];
+      ws.getRow(1).font = { bold: true };
+
+      STAGES.forEach(stage => {
+        byStage[stage].forEach(item => {
+          ws.addRow({
+            stage: STAGE_LABELS[stage],
+            orderNo: item.orderName,
+            item: item.variantTitle ? `${item.productTitle} — ${item.variantTitle}` : item.productTitle,
+            qty: item.quantity,
+            customer: item.customer,
+          });
+        });
+      });
+
+      const buffer = await wb.xlsx.writeBuffer();
+      const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `objexyz-shipping-queue-${new Date().toISOString().slice(0, 10)}.xlsx`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } finally {
+      setExportingXlsx(false);
+    }
+  }
+
   return (
     <div>
-      <div className="mb-8">
-        <h1 className="text-xl font-bold tracking-widest uppercase txt-heading">SHIPPING QUEUE</h1>
-        <p className="text-xs mt-1 tracking-widest" style={{ color: 'var(--muted-2)' }}>PRODUCTION BOARD — PRINT → PAINT → READY → SHIPPED</p>
+      <div className="mb-8 flex items-end justify-between flex-wrap gap-4">
+        <div>
+          <h1 className="text-xl font-bold tracking-widest uppercase txt-heading">SHIPPING QUEUE</h1>
+          <p className="text-xs mt-1 tracking-widest" style={{ color: 'var(--muted-2)' }}>PRODUCTION BOARD — PRINT → PAINT → READY → SHIPPED</p>
+        </div>
+        <button
+          onClick={exportExcel}
+          disabled={exportingXlsx || loading || items.length === 0}
+          className="flex items-center gap-1.5 px-3 py-2 rounded text-xs tracking-widest uppercase"
+          style={{ border: '1px solid var(--accent)', color: 'var(--accent)' }}
+        >
+          <Sheet size={12} /> {exportingXlsx ? 'EXPORTING...' : 'EXPORT XLSX'}
+        </button>
       </div>
 
       {loading && <div className="text-xs tracking-widest" style={{ color: 'var(--muted-2)' }}>LOADING QUEUE...</div>}
