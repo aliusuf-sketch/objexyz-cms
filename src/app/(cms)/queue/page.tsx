@@ -104,26 +104,21 @@ export default function QueuePage() {
       const { Workbook } = await import('exceljs');
       const wb = new Workbook();
       const ws = wb.addWorksheet('Shipping Queue');
-      ws.columns = [
-        { header: 'Stage', key: 'stage', width: 16 },
-        { header: 'Order #', key: 'orderNo', width: 12 },
-        { header: 'Item', key: 'item', width: 34 },
-        { header: 'Qty', key: 'qty', width: 8 },
-        { header: 'Customer Name', key: 'customer', width: 24 },
-      ];
+      ws.columns = STAGES.map(stage => ({ header: STAGE_LABELS[stage], key: stage, width: 38 }));
       ws.getRow(1).font = { bold: true };
 
-      STAGES.forEach(stage => {
-        byStage[stage].forEach(item => {
-          ws.addRow({
-            stage: STAGE_LABELS[stage],
-            orderNo: item.orderName,
-            item: item.variantTitle ? `${item.productTitle} — ${item.variantTitle}` : item.productTitle,
-            qty: item.quantity,
-            customer: item.customer,
-          });
+      const cellText = (item: QueueItem) =>
+        `${item.orderName} · ${item.productTitle}${item.variantTitle ? ` — ${item.variantTitle}` : ''} ×${item.quantity} · ${item.customer}`;
+
+      const maxRows = Math.max(0, ...STAGES.map(s => byStage[s].length));
+      for (let i = 0; i < maxRows; i++) {
+        const row: Record<Stage, string> = {} as Record<Stage, string>;
+        STAGES.forEach(stage => {
+          row[stage] = byStage[stage][i] ? cellText(byStage[stage][i]) : '';
         });
-      });
+        ws.addRow(row);
+      }
+      ws.eachRow(row => { row.alignment = { wrapText: true, vertical: 'top' }; });
 
       const buffer = await wb.xlsx.writeBuffer();
       const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
