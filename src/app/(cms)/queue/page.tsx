@@ -107,6 +107,13 @@ export default function QueuePage() {
       ws.columns = STAGES.map(stage => ({ header: STAGE_LABELS[stage], key: stage, width: 38 }));
       ws.getRow(1).font = { bold: true };
 
+      const countRow: Record<Stage, string> = {} as Record<Stage, string>;
+      STAGES.forEach(stage => {
+        countRow[stage] = `${byStage[stage].length} item${byStage[stage].length !== 1 ? 's' : ''}`;
+      });
+      const countExcelRow = ws.addRow(countRow);
+      countExcelRow.font = { bold: true, italic: true };
+
       const cellText = (item: QueueItem) =>
         `${item.orderName} · ${item.productTitle}${item.variantTitle ? ` — ${item.variantTitle}` : ''} ×${item.quantity} · ${item.customer}`;
 
