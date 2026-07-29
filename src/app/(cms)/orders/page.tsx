@@ -5,6 +5,7 @@ import { ChevronDown, ChevronRight, FileDown, Sheet } from 'lucide-react';
 import SortableHeader from '@/components/SortableHeader';
 import { useSortable } from '@/hooks/useSortable';
 import type { InvoiceData } from '@/components/InvoiceDocument';
+import { downloadWorkbook } from '@/lib/exportExcel';
 
 interface LineItem { title: string; quantity: number; variant?: { title?: string; price: string } }
 interface Order {
@@ -139,14 +140,7 @@ export default function OrdersPage() {
       totalRow.font = { bold: true };
       ws.getColumn('amount').numFmt = '#,##0';
 
-      const buffer = await wb.xlsx.writeBuffer();
-      const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `objexyz-orders-${periodLabel}.xlsx`;
-      a.click();
-      URL.revokeObjectURL(url);
+      await downloadWorkbook(wb, `objexyz-orders-${periodLabel}.xlsx`);
     } finally {
       setExportingXlsx(false);
     }

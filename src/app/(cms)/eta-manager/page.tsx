@@ -4,20 +4,7 @@ import { Save } from 'lucide-react';
 import SortableHeader from '@/components/SortableHeader';
 import { useSortable } from '@/hooks/useSortable';
 import LocalDataWarning from '@/components/LocalDataWarning';
-
-interface LocalData { eta?: string; etaNote?: string; materialGrams?: string; dimensions?: string }
-interface Variant {
-  id: string;
-  title: string;
-  price: string;
-  local?: LocalData;
-}
-interface Product {
-  id: string;
-  title: string;
-  status: string;
-  variants: { edges: { node: Variant }[] };
-}
+import { useProducts } from '@/hooks/useProducts';
 
 interface ETARow {
   variantId: string;
@@ -33,40 +20,31 @@ interface ETARow {
 }
 
 export default function ETAManagerPage() {
+  const { products, loading, localWarning } = useProducts();
   const [rows, setRows] = useState<ETARow[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [localWarning, setLocalWarning] = useState(false);
 
   useEffect(() => {
-    fetch('/api/shopify/products')
-      .then(r => r.json())
-      .then(data => {
-        if (data.localDataError) setLocalWarning(true);
-        const edges = data?.data?.products?.edges || [];
-        const products: Product[] = edges.map((e: { node: Product }) => e.node);
-        const flat: ETARow[] = [];
-        products.forEach(p => {
-          const variants = p.variants?.edges || [];
-          variants.forEach((ve, i) => {
-            const v = ve.node;
-            flat.push({
-              variantId: v.id,
-              productTitle: p.title,
-              productStatus: p.status,
-              variantTitle: v.title,
-              eta: v.local?.eta || '',
-              etaNote: v.local?.etaNote || '',
-              materialGrams: v.local?.materialGrams || '',
-              isFirstOfProduct: i === 0,
-              saving: false,
-              saved: false,
-            });
-          });
+    const flat: ETARow[] = [];
+    products.forEach(p => {
+      const variants = p.variants?.edges || [];
+      variants.forEach((ve, i) => {
+        const v = ve.node;
+        flat.push({
+          variantId: v.id,
+          productTitle: p.title,
+          productStatus: p.status,
+          variantTitle: v.title,
+          eta: v.local?.eta || '',
+          etaNote: v.local?.etaNote || '',
+          materialGrams: v.local?.materialGrams || '',
+          isFirstOfProduct: i === 0,
+          saving: false,
+          saved: false,
         });
-        setRows(flat);
-      })
-      .finally(() => setLoading(false));
-  }, []);
+      });
+    });
+    setRows(flat);
+  }, [products]);
 
   function updateRow(variantId: string, field: 'eta' | 'etaNote' | 'materialGrams', value: string) {
     setRows(prev => prev.map(r => r.variantId === variantId ? { ...r, [field]: value, saved: false } : r));

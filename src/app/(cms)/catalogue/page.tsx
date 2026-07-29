@@ -3,23 +3,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { formatPKR } from '@/lib/utils';
 import { Save, Package, X } from 'lucide-react';
 import LocalDataWarning from '@/components/LocalDataWarning';
-
-interface LocalData { eta?: string; etaNote?: string; materialGrams?: string; dimensions?: string }
-interface Variant {
-  id: string;
-  title: string;
-  price: string;
-  local?: LocalData;
-}
-interface Product {
-  id: string;
-  title: string;
-  status: string;
-  productType: string;
-  tags: string[];
-  featuredImage?: { url: string; altText?: string } | null;
-  variants: { edges: { node: Variant }[] };
-}
+import { useProducts, Product } from '@/hooks/useProducts';
 
 interface VariantRow {
   variantId: string;
@@ -43,44 +27,32 @@ interface ProductGroup {
 }
 
 export default function CataloguePage() {
+  const { products, loading, localWarning } = useProducts();
   const [groups, setGroups] = useState<ProductGroup[]>([]);
-  const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [categoryFilter, setCategoryFilter] = useState('ALL');
-  const [localWarning, setLocalWarning] = useState(false);
 
-  useEffect(() => { fetchCatalogue(); }, []);
-
-  function fetchCatalogue() {
-    setLoading(true);
-    fetch('/api/shopify/products')
-      .then(r => r.json())
-      .then(data => {
-        if (data.localDataError) setLocalWarning(true);
-        const edges = data?.data?.products?.edges || [];
-        const products: Product[] = edges.map((e: { node: Product }) => e.node);
-        setGroups(products.map(p => ({
-          productId: p.id,
-          title: p.title,
-          status: p.status,
-          productType: p.productType || '',
-          tags: p.tags || [],
-          imageUrl: p.featuredImage?.url,
-          variants: (p.variants?.edges || []).map(ve => ({
-            variantId: ve.node.id,
-            title: ve.node.title,
-            price: ve.node.price,
-            dimensions: ve.node.local?.dimensions || '',
-            eta: ve.node.local?.eta || '',
-            materialGrams: ve.node.local?.materialGrams || '',
-            saving: false,
-            saved: false,
-          })),
-        })));
-      })
-      .finally(() => setLoading(false));
-  }
+  useEffect(() => {
+    setGroups(products.map((p: Product) => ({
+      productId: p.id,
+      title: p.title,
+      status: p.status,
+      productType: p.productType || '',
+      tags: p.tags || [],
+      imageUrl: p.featuredImage?.url,
+      variants: (p.variants?.edges || []).map(ve => ({
+        variantId: ve.node.id,
+        title: ve.node.title,
+        price: ve.node.price,
+        dimensions: ve.node.local?.dimensions || '',
+        eta: ve.node.local?.eta || '',
+        materialGrams: ve.node.local?.materialGrams || '',
+        saving: false,
+        saved: false,
+      })),
+    })));
+  }, [products]);
 
   function updateVariant(productId: string, variantId: string, field: 'dimensions' | 'eta' | 'materialGrams', value: string) {
     setGroups(prev => prev.map(g => g.productId !== productId ? g : {

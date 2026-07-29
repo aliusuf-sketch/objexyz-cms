@@ -4,6 +4,7 @@ import { formatDate, shipByDate, daysUntil } from '@/lib/utils';
 import { useQueue, STAGES, STAGE_LABELS, QueueItem, Stage } from '@/hooks/useQueue';
 import LocalDataWarning from '@/components/LocalDataWarning';
 import { ChevronLeft, ChevronRight, Package, Sheet } from 'lucide-react';
+import { downloadWorkbook } from '@/lib/exportExcel';
 
 function ShipBy({ item }: { item: QueueItem }) {
   const target = shipByDate(item.createdAt, item.eta);
@@ -127,14 +128,7 @@ export default function QueuePage() {
       }
       ws.eachRow(row => { row.alignment = { wrapText: true, vertical: 'top' }; });
 
-      const buffer = await wb.xlsx.writeBuffer();
-      const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `objexyz-shipping-queue-${new Date().toISOString().slice(0, 10)}.xlsx`;
-      a.click();
-      URL.revokeObjectURL(url);
+      await downloadWorkbook(wb, `objexyz-shipping-queue-${new Date().toISOString().slice(0, 10)}.xlsx`);
     } finally {
       setExportingXlsx(false);
     }

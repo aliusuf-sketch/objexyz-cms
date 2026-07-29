@@ -3,15 +3,9 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { formatPKR } from '@/lib/utils';
 import { calcCost, calcUnitCost, deriveRates, CostRates, DEFAULT_COST_RATES, UsageInput, EMPTY_USAGE } from '@/lib/costCalc';
 import { useQueue } from '@/hooks/useQueue';
+import { useProducts } from '@/hooks/useProducts';
+import LocalDataWarning from '@/components/LocalDataWarning';
 import { Save, Settings2, Download, ChevronDown, ChevronUp, AlertTriangle } from 'lucide-react';
-
-// ── Shopify data shapes ────────────────────────────────────────────────
-interface LocalData {
-  resinMl?: number; printerRuntimeHrs?: number; sandingHrs?: number;
-  paintingHrs?: number; finishingHrs?: number; packagingHrs?: number;
-}
-interface Variant { id: string; title: string; price: string; local?: LocalData }
-interface Product { id: string; title: string; productType: string; variants: { edges: { node: Variant }[] } }
 
 interface CatalogRow {
   key: string;
@@ -91,8 +85,8 @@ export default function CostCalculatorPage() {
   const [ratesLoading, setRatesLoading] = useState(true);
   const [ratesSaving, setRatesSaving] = useState(false);
 
+  const { products, loading, localWarning } = useProducts();
   const [rows, setRows] = useState<CatalogRow[]>([]);
-  const [loading, setLoading] = useState(true);
   const saveTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
 
   // ── Load rates ──────────────────────────────────────────────────
@@ -128,48 +122,41 @@ export default function CostCalculatorPage() {
   const ratesDirty = JSON.stringify(rates) !== JSON.stringify(savedRates);
   const derived = useMemo(() => deriveRates(rates), [rates]);
 
-  // ── Load catalog ────────────────────────────────────────────────
+  // ── Build catalog rows from the shared product fetch ──────────────
   useEffect(() => {
-    fetch('/api/shopify/products')
-      .then(r => r.json())
-      .then(data => {
-        const edges = data?.data?.products?.edges || [];
-        const products: Product[] = edges.map((e: { node: Product }) => e.node);
-        const flat: CatalogRow[] = [];
-        products.forEach(p => {
-          const realVariants = (p.variants?.edges || [])
-            .map(e => e.node)
-            .filter(v => !v.title.toLowerCase().includes('custom'));
-          const sorted = [...realVariants].sort((a, b) => Number(a.price) - Number(b.price));
+    const flat: CatalogRow[] = [];
+    products.forEach(p => {
+      const realVariants = (p.variants?.edges || [])
+        .map(e => e.node)
+        .filter(v => !v.title.toLowerCase().includes('custom'));
+      const sorted = [...realVariants].sort((a, b) => Number(a.price) - Number(b.price));
 
-          sorted.forEach((v, i) => {
-            const sizeLabel: CatalogRow['sizeLabel'] = sorted.length === 1 ? 'SINGLE' : i === 0 ? 'SMALL' : 'LARGE';
-            flat.push({
-              key: v.id,
-              productId: p.id,
-              productTitle: p.title,
-              productType: p.productType || 'Uncategorized',
-              variantId: v.id,
-              variantTitle: v.title,
-              sizeLabel,
-              price: Number(v.price),
-              usage: {
-                resinMl: v.local?.resinMl || 0,
-                printerRuntimeHrs: v.local?.printerRuntimeHrs || 0,
-                sandingHrs: v.local?.sandingHrs || 0,
-                paintingHrs: v.local?.paintingHrs || 0,
-                finishingHrs: v.local?.finishingHrs || 0,
-                packagingHrs: v.local?.packagingHrs || 0,
-              },
-              saving: false,
-              saved: false,
-            });
-          });
+      sorted.forEach((v, i) => {
+        const sizeLabel: CatalogRow['sizeLabel'] = sorted.length === 1 ? 'SINGLE' : i === 0 ? 'SMALL' : 'LARGE';
+        flat.push({
+          key: v.id,
+          productId: p.id,
+          productTitle: p.title,
+          productType: p.productType || 'Uncategorized',
+          variantId: v.id,
+          variantTitle: v.title,
+          sizeLabel,
+          price: Number(v.price),
+          usage: {
+            resinMl: v.local?.resinMl || 0,
+            printerRuntimeHrs: v.local?.printerRuntimeHrs || 0,
+            sandingHrs: v.local?.sandingHrs || 0,
+            paintingHrs: v.local?.paintingHrs || 0,
+            finishingHrs: v.local?.finishingHrs || 0,
+            packagingHrs: v.local?.packagingHrs || 0,
+          },
+          saving: false,
+          saved: false,
         });
-        setRows(flat);
-      })
-      .finally(() => setLoading(false));
-  }, []);
+      });
+    });
+    setRows(flat);
+  }, [products]);
 
   function updateUsage(variantId: string, field: keyof UsageInput, value: number) {
     setRows(prev => prev.map(r => r.variantId !== variantId ? r : { ...r, usage: { ...r.usage, [field]: value }, saved: false }));
@@ -381,6 +368,8 @@ export default function CostCalculatorPage() {
           {loading ? (
             <div className="text-xs tracking-widest" style={{ color: 'var(--muted-2)' }}>LOADING CATALOG...</div>
           ) : (
+            <>
+            {localWarning && <LocalDataWarning />}
             <div className="rounded-lg overflow-hidden" style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
               <div className="overflow-x-auto">
                 <table className="w-full text-xs">
@@ -429,6 +418,7 @@ export default function CostCalculatorPage() {
                 </table>
               </div>
             </div>
+            </>
           )}
         </>
       ) : tab === 'single' ? (

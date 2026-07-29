@@ -1,20 +1,10 @@
 'use client';
-import { useEffect, useState, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { formatPKR } from '@/lib/utils';
 import SortableHeader from '@/components/SortableHeader';
 import { useSortable } from '@/hooks/useSortable';
 import LocalDataWarning from '@/components/LocalDataWarning';
-
-interface LocalData { eta?: string; etaNote?: string; materialGrams?: string; dimensions?: string }
-interface Variant { id: string; title: string; price: string; local?: LocalData; }
-interface Product {
-  id: string;
-  title: string;
-  status: string;
-  productType: string;
-  tags: string[];
-  variants: { edges: { node: Variant }[] };
-}
+import { useProducts, Product } from '@/hooks/useProducts';
 
 interface ProductRow {
   id: string;
@@ -29,24 +19,8 @@ interface ProductRow {
 }
 
 export default function ProductsPage() {
-  const [products, setProducts] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { products, loading, localWarning, refetch } = useProducts();
   const [toggling, setToggling] = useState<string | null>(null);
-  const [localWarning, setLocalWarning] = useState(false);
-
-  useEffect(() => { fetchProducts(); }, []);
-
-  function fetchProducts() {
-    setLoading(true);
-    fetch('/api/shopify/products')
-      .then(r => r.json())
-      .then(data => {
-        if (data.localDataError) setLocalWarning(true);
-        const edges = data?.data?.products?.edges || [];
-        setProducts(edges.map((e: { node: Product }) => e.node));
-      })
-      .finally(() => setLoading(false));
-  }
 
   async function toggleStatus(product: Product) {
     const newStatus = product.status === 'ACTIVE' ? 'DRAFT' : 'ACTIVE';
@@ -57,7 +31,7 @@ export default function ProductsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ productId: product.id, status: newStatus }),
       });
-      fetchProducts();
+      refetch();
     } finally {
       setToggling(null);
     }

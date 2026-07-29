@@ -1,8 +1,7 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { jwtVerify } from 'jose';
-
-const secret = new TextEncoder().encode(process.env.JWT_SECRET || 'fallback-secret-32-chars-minimum!!');
+import { getJwtSecret } from '@/lib/jwtSecret';
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -17,9 +16,11 @@ export async function middleware(request: NextRequest) {
   }
 
   try {
-    await jwtVerify(token, secret);
+    await jwtVerify(token, getJwtSecret());
     return NextResponse.next();
   } catch {
+    // Covers both an invalid/expired token and JWT_SECRET being unset —
+    // either way, fail closed and send them to re-authenticate.
     return NextResponse.redirect(new URL('/login', request.url));
   }
 }
