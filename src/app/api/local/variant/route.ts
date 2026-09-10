@@ -1,38 +1,24 @@
-import { NextRequest, NextResponse } from 'next/server';
 import { getAllVariantData, setVariantData, VariantData } from '@/lib/db';
+import { apiRoute, ApiError } from '@/lib/apiRoute';
 
-export async function GET() {
-  try {
-    const data = await getAllVariantData();
-    return NextResponse.json({ data });
-  } catch (err) {
-    return NextResponse.json({ error: String(err) }, { status: 500 });
-  }
-}
+export const GET = apiRoute(async () => ({ data: await getAllVariantData() }));
 
 const NUMERIC_FIELDS = [
   'resinMl', 'printerRuntimeHrs', 'sandingHrs', 'paintingHrs', 'finishingHrs', 'packagingHrs',
 ] as const;
 const STRING_FIELDS = ['eta', 'etaNote', 'materialGrams', 'dimensions'] as const;
 
-export async function POST(request: NextRequest) {
-  try {
-    const body = await request.json();
-    const { variantId } = body;
-    if (!variantId) {
-      return NextResponse.json({ error: 'variantId is required' }, { status: 400 });
-    }
-    const patch: VariantData = {};
-    for (const key of STRING_FIELDS) {
-      if (body[key] !== undefined) patch[key] = body[key];
-    }
-    for (const key of NUMERIC_FIELDS) {
-      if (body[key] !== undefined) patch[key] = Number(body[key]) || 0;
-    }
+export const POST = apiRoute(async (request) => {
+  const body = await request.json();
+  const { variantId } = body;
+  if (!variantId) throw new ApiError('variantId is required');
 
-    const data = await setVariantData(variantId, patch);
-    return NextResponse.json({ data });
-  } catch (err) {
-    return NextResponse.json({ error: String(err) }, { status: 500 });
+  const patch: VariantData = {};
+  for (const key of STRING_FIELDS) {
+    if (body[key] !== undefined) patch[key] = body[key];
   }
-}
+  for (const key of NUMERIC_FIELDS) {
+    if (body[key] !== undefined) patch[key] = Number(body[key]) || 0;
+  }
+  return { data: await setVariantData(variantId, patch) };
+});

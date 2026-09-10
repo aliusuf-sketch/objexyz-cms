@@ -1,5 +1,5 @@
-import { NextRequest, NextResponse } from 'next/server';
 import { shopifyFetch } from '@/lib/shopify';
+import { apiRoute, ApiError } from '@/lib/apiRoute';
 
 const UPDATE_STATUS = `
   mutation UpdateProductStatus($input: ProductInput!) {
@@ -10,14 +10,8 @@ const UPDATE_STATUS = `
   }
 `;
 
-export async function POST(request: NextRequest) {
-  try {
-    const { productId, status } = await request.json();
-    const data = await shopifyFetch(UPDATE_STATUS, {
-      input: { id: productId, status },
-    });
-    return NextResponse.json(data);
-  } catch (err) {
-    return NextResponse.json({ error: String(err) }, { status: 500 });
-  }
-}
+export const POST = apiRoute(async (request) => {
+  const { productId, status } = await request.json();
+  if (!productId || !status) throw new ApiError('productId and status are required');
+  return shopifyFetch(UPDATE_STATUS, { input: { id: productId, status } });
+});

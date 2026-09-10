@@ -89,6 +89,12 @@ export interface ReceivableOrderVM {
   shippedWithoutPayment: boolean;
   items: ReceivableLineItem[];
   shipping: ReceivableShipping | null;
+  // Removed items are filtered out of `items` entirely, so the client has
+  // nothing to reconstruct the full removed set from. Surface it explicitly
+  // — /api/local/receivable replaces this array rather than appending, so a
+  // client that only knew about this session's removals would resurrect
+  // everything removed before the last refresh.
+  removedLineItemKeys: string[];
 }
 
 export function buildReceivableOrder(
@@ -144,6 +150,7 @@ export function buildReceivableOrder(
     shippedWithoutPayment: raw.financialStatus !== 'PAID' && raw.fulfillmentStatus === 'FULFILLED',
     items: [...shopifyItems, ...customItems],
     shipping,
+    removedLineItemKeys: ov.removedLineItemKeys || [],
   };
 }
 

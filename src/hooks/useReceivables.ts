@@ -16,10 +16,11 @@ export function useReceivables() {
   const [localWarning, setLocalWarning] = useState(false);
   const debounceTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
 
-  // Removed items vanish from the view model entirely, so there's nothing
-  // to recompute the full removed set from — track it ourselves per order,
-  // for the life of this page load, and send the full accumulated list on
-  // every removal (the server replaces, it doesn't merge).
+  // The save endpoint replaces removedLineItemKeys rather than appending,
+  // so every removal must send the COMPLETE set. Removed items are filtered
+  // out of the view model's `items`, so we seed this from the VM's explicit
+  // removedLineItemKeys on each load — tracking only this session's
+  // removals would resurrect anything removed before the last refresh.
   const removedKeysByOrder = useRef<Record<string, Set<string>>>({});
 
   const fetchOrders = useCallback((isSync = false) => {
@@ -30,8 +31,11 @@ export function useReceivables() {
       .then(data => {
         if (data.error) { setError(data.error); return; }
         if (data.localDataError) setLocalWarning(true);
-        setOrders(data.orders || []);
-        removedKeysByOrder.current = {};
+        const fetched: ReceivableOrderVM[] = data.orders || [];
+        setOrders(fetched);
+        removedKeysByOrder.current = Object.fromEntries(
+          fetched.map(o => [o.id, new Set(o.removedLineItemKeys || [])])
+        );
       })
       .catch(e => setError(String(e)))
       .finally(() => { setLoading(false); setSyncing(false); });

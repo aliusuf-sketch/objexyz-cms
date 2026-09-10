@@ -70,6 +70,37 @@ export async function shopifyFetch(query: string, variables?: Record<string, unk
   return res.json();
 }
 
+// ── Shared constants ───────────────────────────────────────────────────
+// Studio launch date. Every order-scoped query and the ShopifyQL analytics
+// baseline derive from this — it was previously hardcoded as a bare string
+// in four separate routes, which is exactly how those quietly drift apart.
+export const LAUNCH_DATE = '2026-05-09';
+export const SINCE_LAUNCH = `created_at:>${LAUNCH_DATE}`;
+
+// Pending Receivables: unpaid / partially paid / unfulfilled / partially
+// fulfilled / on hold, excluding voided and refunded (dead orders).
+export const RECEIVABLES_FILTER =
+  `created_at:>=${LAUNCH_DATE} AND (financial_status:pending OR financial_status:partially_paid ` +
+  'OR fulfillment_status:unfulfilled OR fulfillment_status:partial OR fulfillment_status:on_hold) ' +
+  'AND -financial_status:voided AND -financial_status:refunded';
+
+// ── Shared field fragments ─────────────────────────────────────────────
+// Every order query needs the same identity + status core; the differences
+// are only in which money fields and line-item detail each page requires.
+const ORDER_CORE_FIELDS = `
+  id
+  name
+  createdAt
+  financialStatus: displayFinancialStatus
+  fulfillmentStatus: displayFulfillmentStatus
+`;
+
+const ORDER_TOTAL_FIELDS = `
+  totalPriceSet { shopMoney { amount currencyCode } }
+`;
+
+// ── Products ───────────────────────────────────────────────────────────
+
 export const PRODUCTS_QUERY = `
   query GetProducts($first: Int!) {
     products(first: $first) {
@@ -96,36 +127,22 @@ export const PRODUCTS_QUERY = `
   }
 `;
 
+// ── Orders list (/orders page + invoice generation) ────────────────────
+
 export const ORDERS_QUERY = `
   query GetOrders($first: Int!, $query: String!) {
     orders(first: $first, query: $query) {
       edges {
         node {
-          id
-          name
-          createdAt
-          financialStatus: displayFinancialStatus
-          fulfillmentStatus: displayFulfillmentStatus
-          totalPriceSet {
-            shopMoney {
-              amount
-              currencyCode
-            }
-          }
-          customer {
-            firstName
-            lastName
-            email
-          }
+          ${ORDER_CORE_FIELDS}
+          ${ORDER_TOTAL_FIELDS}
+          customer { firstName lastName email }
           lineItems(first: 10) {
             edges {
               node {
                 title
                 quantity
-                variant {
-                  title
-                  price
-                }
+                variant { title price }
               }
             }
           }
@@ -135,25 +152,17 @@ export const ORDERS_QUERY = `
   }
 `;
 
+// ── Dashboard (KPIs, payment status, category breakdown) ───────────────
+
 export const DASHBOARD_QUERY = `
   query DashboardData($ordersQuery: String!) {
     orders(first: 250, query: $ordersQuery) {
       edges {
         node {
-          id
-          name
-          createdAt
-          financialStatus: displayFinancialStatus
-          fulfillmentStatus: displayFulfillmentStatus
-          totalPriceSet {
-            shopMoney { amount currencyCode }
-          }
-          subtotalPriceSet {
-            shopMoney { amount }
-          }
-          totalOutstandingSet {
-            shopMoney { amount }
-          }
+          ${ORDER_CORE_FIELDS}
+          ${ORDER_TOTAL_FIELDS}
+          subtotalPriceSet { shopMoney { amount } }
+          totalOutstandingSet { shopMoney { amount } }
           lineItems(first: 50) {
             edges {
               node {
@@ -171,22 +180,43 @@ export const DASHBOARD_QUERY = `
   }
 `;
 
-// Shared field selection for Receivables — used by both the paginated
-// filtered-orders query and the by-id lookup for orders that are locally
-// flagged disputed but no longer match the live Shopify filter.
+// ── Queue: line-item level view for production planning + shipping board ─
+
+export const QUEUE_QUERY = `
+  query QueueData($ordersQuery: String!) {
+    orders(first: 250, query: $ordersQuery) {
+      edges {
+        node {
+          ${ORDER_CORE_FIELDS}
+          customer { firstName lastName }
+          lineItems(first: 50) {
+            edges {
+              node {
+                id
+                title
+                quantity
+                variant { id title price }
+                product { id featuredImage { url altText } }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+`;
+
+// ── Receivables ────────────────────────────────────────────────────────
+
 const RECEIVABLE_ORDER_FIELDS = `
-  id
-  name
-  createdAt
-  financialStatus: displayFinancialStatus
-  fulfillmentStatus: displayFulfillmentStatus
+  ${ORDER_CORE_FIELDS}
+  ${ORDER_TOTAL_FIELDS}
   cancelledAt
   customer { firstName lastName }
   shippingLine {
     title
     originalPriceSet { shopMoney { amount } }
   }
-  totalPriceSet { shopMoney { amount } }
   lineItems(first: 50) {
     edges {
       node {
@@ -202,9 +232,7 @@ const RECEIVABLE_ORDER_FIELDS = `
   }
 `;
 
-// Pending Receivables: orders that are unpaid, partially paid, unfulfilled,
-// partially fulfilled, or on hold — paginated via $cursor since the filtered
-// set can exceed 50 as the store grows.
+// Paginated via $cursor since the filtered set can exceed 50 as the store grows.
 export const RECEIVABLES_QUERY = `
   query ReceivablesData($ordersQuery: String!, $cursor: String) {
     orders(first: 50, after: $cursor, query: $ordersQuery) {
@@ -226,42 +254,6 @@ export const RECEIVABLES_BY_ID_QUERY = `
     nodes(ids: $ids) {
       ... on Order {
         ${RECEIVABLE_ORDER_FIELDS}
-      }
-    }
-  }
-`;
-
-// Queue: line-item level view for production planning + shipping board.
-export const QUEUE_QUERY = `
-  query QueueData($ordersQuery: String!) {
-    orders(first: 250, query: $ordersQuery) {
-      edges {
-        node {
-          id
-          name
-          createdAt
-          financialStatus: displayFinancialStatus
-          fulfillmentStatus: displayFulfillmentStatus
-          customer { firstName lastName }
-          lineItems(first: 50) {
-            edges {
-              node {
-                id
-                title
-                quantity
-                variant {
-                  id
-                  title
-                  price
-                }
-                product {
-                  id
-                  featuredImage { url altText }
-                }
-              }
-            }
-          }
-        }
       }
     }
   }

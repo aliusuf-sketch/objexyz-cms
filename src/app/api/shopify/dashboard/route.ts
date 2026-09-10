@@ -1,13 +1,6 @@
-import { NextResponse } from 'next/server';
-import { shopifyFetch, DASHBOARD_QUERY } from '@/lib/shopify';
+import { shopifyFetch, DASHBOARD_QUERY, SINCE_LAUNCH } from '@/lib/shopify';
+import { apiRoute } from '@/lib/apiRoute';
 
-export async function GET() {
-  try {
-    const data = await shopifyFetch(DASHBOARD_QUERY, {
-      ordersQuery: 'created_at:>2026-05-09',
-    });
-    return NextResponse.json(data);
-  } catch (err) {
-    return NextResponse.json({ error: String(err) }, { status: 500 });
-  }
-}
+export const GET = apiRoute(async () =>
+  shopifyFetch(DASHBOARD_QUERY, { ordersQuery: SINCE_LAUNCH })
+);
