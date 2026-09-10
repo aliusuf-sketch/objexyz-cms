@@ -27,8 +27,11 @@ GraphQL API, deployed on Vercel. Repo: `objexyz-cms`.
    studio-wide **cost rates** record. See `src/lib/db.ts`. Three JSON
    documents (`variant_data`, `order_stages`, `cost_rates`) — the catalogue
    is small (tens of products), so one doc per concern beats scanning many
-   keys. Read/write via `/api/local/variant`, `/api/local/stage`, and
-   `/api/local/rates`.
+   keys. Read/write via `/api/local/variant`, `/api/local/stage`,
+   `/api/local/rates`, and `/api/local/receivable` (per-order Pending
+   Receivables overrides — disputed flag/note, amount received, removed/
+   unchecked line-item keys, ad-hoc items; see `src/lib/receivables.ts`
+   for the client-safe types + view-model merge, same split as CostRates).
    `CostRates`/`DEFAULT_COST_RATES`/the cost formula live in
    `src/lib/costCalc.ts` (client-safe — no Redis import) so both the
    Cost Calculator page and `db.ts` can use them without leaking the
@@ -71,6 +74,7 @@ needed, but shouldn't be the default path.
 | `/queue` | Shipping Queue — kanban board, 5 stages: Print → Paint → Decals → Ready to Ship → Shipped |
 | `/catalogue` | Full spec sheet — image, variants, price, dimensions, ETA, material grams, all editable inline |
 | `/cost-calculator` | Cost Rates (materials/labor/equipment/fulfillment) + per-variant usage → live cost/profit/margin per product, plus a single-item quote calculator |
+| `/receivables` | Pending Receivables — unpaid/partial/unfulfilled/disputed orders, editable checked/removed/ad-hoc line items, dispute flag + amount received, Excel/PDF export |
 | `/products` | Product table — status toggle, variant prices, ETA summary |
 | `/orders` | Order list — expandable line items |
 | `/analytics` | ShopifyQL — revenue/sessions/top products |

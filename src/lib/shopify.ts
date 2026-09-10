@@ -171,6 +171,66 @@ export const DASHBOARD_QUERY = `
   }
 `;
 
+// Shared field selection for Receivables — used by both the paginated
+// filtered-orders query and the by-id lookup for orders that are locally
+// flagged disputed but no longer match the live Shopify filter.
+const RECEIVABLE_ORDER_FIELDS = `
+  id
+  name
+  createdAt
+  financialStatus: displayFinancialStatus
+  fulfillmentStatus: displayFulfillmentStatus
+  cancelledAt
+  customer { firstName lastName }
+  shippingLine {
+    title
+    originalPriceSet { shopMoney { amount } }
+  }
+  totalPriceSet { shopMoney { amount } }
+  lineItems(first: 50) {
+    edges {
+      node {
+        id
+        title
+        quantity
+        sku
+        originalUnitPriceSet { shopMoney { amount } }
+        variant { title image { url } }
+        product { featuredImage { url } }
+      }
+    }
+  }
+`;
+
+// Pending Receivables: orders that are unpaid, partially paid, unfulfilled,
+// partially fulfilled, or on hold — paginated via $cursor since the filtered
+// set can exceed 50 as the store grows.
+export const RECEIVABLES_QUERY = `
+  query ReceivablesData($ordersQuery: String!, $cursor: String) {
+    orders(first: 50, after: $cursor, query: $ordersQuery) {
+      pageInfo { hasNextPage endCursor }
+      edges {
+        node {
+          ${RECEIVABLE_ORDER_FIELDS}
+        }
+      }
+    }
+  }
+`;
+
+// Fetch specific orders by GID — used to pull in orders that are locally
+// flagged disputed even though Shopify now reports them PAID/FULFILLED (the
+// discrepancy is real-world and Shopify's API will never reflect it).
+export const RECEIVABLES_BY_ID_QUERY = `
+  query ReceivablesById($ids: [ID!]!) {
+    nodes(ids: $ids) {
+      ... on Order {
+        ${RECEIVABLE_ORDER_FIELDS}
+      }
+    }
+  }
+`;
+
 // Queue: line-item level view for production planning + shipping board.
 export const QUEUE_QUERY = `
   query QueueData($ordersQuery: String!) {
