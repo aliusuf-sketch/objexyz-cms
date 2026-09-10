@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { formatPKR } from '@/lib/utils';
+import { Loading } from '@/components/ui';
 
 interface AnalyticsData {
   revenueData: { data?: { shopifyqlQuery?: { tableData?: { rowData: string[][], columns: { name: string }[] } } } };
@@ -50,7 +51,7 @@ export default function AnalyticsPage() {
         <p className="text-xs mt-1 tracking-widest" style={{ color: 'var(--muted-2)' }}>PERFORMANCE SINCE 2026-05-09</p>
       </div>
 
-      {loading && <div className="text-xs tracking-widest" style={{ color: 'var(--muted-2)' }}>RUNNING SHOPIFYQL QUERIES...</div>}
+      {loading && <Loading label="RUNNING SHOPIFYQL QUERIES..." />}
       {error && (
         <div className="rounded p-4 mb-6 text-xs" style={{ background: 'var(--danger-bg)', border: '1px solid var(--danger-border)', color: 'var(--danger)' }}>
           ShopifyQL Error: {error}

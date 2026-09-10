@@ -5,6 +5,7 @@ import SortableHeader from '@/components/SortableHeader';
 import { useSortable } from '@/hooks/useSortable';
 import LocalDataWarning from '@/components/LocalDataWarning';
 import { Package } from 'lucide-react';
+import { Loading, ErrorNote } from '@/components/ui';
 
 interface PlanRow {
   key: string;
@@ -62,11 +63,9 @@ export default function ProductionPage() {
         <p className="text-xs mt-1 tracking-widest" style={{ color: 'var(--muted-2)' }}>WHAT TO MAKE — ALL UNSHIPPED ORDERS</p>
       </div>
 
-      {loading && <div className="text-xs tracking-widest" style={{ color: 'var(--muted-2)' }}>LOADING PRODUCTION DATA...</div>}
+      {loading && <Loading label="LOADING PRODUCTION DATA..." />}
       {error && (
-        <div className="rounded p-4 text-xs" style={{ background: 'var(--danger-bg)', border: '1px solid var(--danger-border)', color: 'var(--danger)' }}>
-          {error}
-        </div>
+        <ErrorNote message={error} />
       )}
       {!loading && localWarning && <LocalDataWarning />}
 

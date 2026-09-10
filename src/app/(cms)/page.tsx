@@ -3,6 +3,7 @@ import { useEffect, useState, useMemo } from 'react';
 import { formatPKR, shipByDate, daysUntil } from '@/lib/utils';
 import { useQueue } from '@/hooks/useQueue';
 import { AlertTriangle } from 'lucide-react';
+import { Card, Panel, StatCard, Loading, inputStyle } from '@/components/ui';
 
 interface LineItem {
   title: string;
@@ -26,27 +27,6 @@ interface Order {
 type PeriodType = '1w' | '2w' | '4w' | 'custom';
 const PERIOD_DAYS: Record<Exclude<PeriodType, 'custom'>, number> = { '1w': 7, '2w': 14, '4w': 28 };
 const PERIOD_STORAGE_KEY = 'dashboard_period';
-
-function StatCard({ label, value, sub, warn, big }: { label: string; value: string; sub?: string; warn?: boolean; big?: boolean }) {
-  return (
-    <div className="rounded-lg px-4 flex flex-col justify-center h-full" style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
-      <div className="text-xs tracking-widest mb-1 truncate" style={{ color: 'var(--muted-2)' }}>{label}</div>
-      <div className={big ? 'text-2xl font-bold' : 'text-lg font-bold'} style={{ color: warn ? 'var(--warn)' : 'var(--text)' }}>{value}</div>
-      {sub && <div className="text-xs mt-0.5 truncate" style={{ color: 'var(--muted-2)' }}>{sub}</div>}
-    </div>
-  );
-}
-
-function Panel({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <div className="rounded-lg flex flex-col min-h-0" style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
-      <div className="px-4 py-2.5 border-b shrink-0" style={{ borderColor: 'var(--border)' }}>
-        <h2 className="text-xs font-bold tracking-widest uppercase" style={{ color: 'var(--muted)' }}>{title}</h2>
-      </div>
-      <div className="p-4 overflow-y-auto flex-1 min-h-0">{children}</div>
-    </div>
-  );
-}
 
 export default function DashboardPage() {
   const [orders, setOrders] = useState<Order[]>([]);
@@ -174,11 +154,6 @@ export default function DashboardPage() {
     return Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 6);
   }, [orders]);
 
-  const selectStyle = {
-    background: 'var(--bg)',
-    border: '1px solid var(--input-border)',
-    color: 'var(--text)',
-  };
 
   return (
     <div className="flex flex-col" style={{ height: 'calc(100vh - 4rem)' }}>
@@ -203,7 +178,7 @@ export default function DashboardPage() {
       )}
 
       {loading ? (
-        <div className="text-xs tracking-widest" style={{ color: 'var(--muted-2)' }}>LOADING OPERATIONS DATA...</div>
+        <Loading label="LOADING OPERATIONS DATA..." />
       ) : (
         <div className="flex-1 grid grid-cols-12 gap-3 min-h-0">
           {/* Left column: all stat rows */}
@@ -216,7 +191,7 @@ export default function DashboardPage() {
             </div>
 
             {/* Fulfilled-in-period stat with selector */}
-            <div className="rounded-lg px-4 py-3 shrink-0 flex items-center justify-between gap-4 flex-wrap" style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
+            <Card className="px-4 py-3 shrink-0 flex items-center justify-between gap-4 flex-wrap">
               <div>
                 <div className="text-xs tracking-widest mb-1" style={{ color: 'var(--muted-2)' }}>ITEMS FULFILLED</div>
                 <div className="text-2xl font-bold" style={{ color: 'var(--text)' }}>
@@ -229,7 +204,7 @@ export default function DashboardPage() {
                   value={periodType}
                   onChange={e => updatePeriod(e.target.value as PeriodType)}
                   className="px-2 py-1.5 rounded text-xs outline-none"
-                  style={selectStyle}
+                  style={inputStyle}
                 >
                   <option value="1w">LAST 1 WEEK</option>
                   <option value="2w">LAST 2 WEEKS</option>
@@ -243,11 +218,11 @@ export default function DashboardPage() {
                     value={customDays}
                     onChange={e => updatePeriod('custom', Number(e.target.value) || 1)}
                     className="px-2 py-1.5 rounded text-xs outline-none w-16"
-                    style={selectStyle}
+                    style={inputStyle}
                   />
                 )}
               </div>
-            </div>
+            </Card>
 
             <div className="grid grid-cols-3 gap-3 shrink-0" style={{ height: 68 }}>
               <StatCard label="CAPTURED" value={formatPKR(stats.paidAmount)} sub={`${stats.paid} orders`} />
@@ -264,7 +239,7 @@ export default function DashboardPage() {
 
             {/* Fulfillment breakdown bar */}
             {stats.totalOrders > 0 && (
-              <div className="rounded-lg px-4 py-3 shrink-0" style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
+              <Card className="px-4 py-3 shrink-0">
                 <div className="text-xs tracking-widest uppercase mb-2" style={{ color: 'var(--muted)' }}>FULFILLMENT BREAKDOWN</div>
                 <div className="flex rounded overflow-hidden h-2.5 mb-2">
                   {stats.fulfilled > 0 && <div style={{ width: `${(stats.fulfilled / stats.totalOrders) * 100}%`, background: 'var(--accent)', opacity: 0.85 }} />}
@@ -276,7 +251,7 @@ export default function DashboardPage() {
                   <span style={{ color: 'var(--warn)' }}>■ In Progress ({stats.inProgress})</span>
                   <span>■ Unfulfilled ({stats.unfulfilled})</span>
                 </div>
-              </div>
+              </Card>
             )}
           </div>
 

@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import {
   LayoutDashboard, Package, ShoppingCart, BarChart2,
-  Clock, PlusCircle, LogOut, Factory, ListChecks, BookOpen, Calculator, Wallet
+  PlusCircle, LogOut, Factory, ListChecks, BookOpen, Calculator, Wallet
 } from 'lucide-react';
 import ThemeToggle from './ThemeToggle';
 
@@ -17,7 +17,6 @@ const navItems = [
   { href: '/products', label: 'PRODUCTS', icon: Package },
   { href: '/orders', label: 'ORDERS', icon: ShoppingCart },
   { href: '/analytics', label: 'ANALYTICS', icon: BarChart2 },
-  { href: '/eta-manager', label: 'ETA MANAGER', icon: Clock },
   { href: '/new-product', label: 'NEW PRODUCT', icon: PlusCircle },
 ];
 

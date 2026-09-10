@@ -72,13 +72,12 @@ needed, but shouldn't be the default path.
 | `/` | Dashboard — revenue/volume, payment status, fulfillment breakdown, recent orders, top products |
 | `/production` | Production Planning — paid+unshipped items grouped by product+variant, with unit/order/material totals |
 | `/queue` | Shipping Queue — kanban board, 5 stages: Print → Paint → Decals → Ready to Ship → Shipped |
-| `/catalogue` | Full spec sheet — image, variants, price, dimensions, ETA, material grams, all editable inline |
+| `/catalogue` | Full spec sheet — image, variants, price, dimensions, ETA, ETA note, material grams, all editable inline. Absorbed the old ETA Manager page (same data, same endpoint, subset of fields). |
 | `/cost-calculator` | Cost Rates (materials/labor/equipment/fulfillment) + per-variant usage → live cost/profit/margin per product, plus a single-item quote calculator |
 | `/receivables` | Pending Receivables — unpaid/partial/unfulfilled/disputed orders, editable checked/removed/ad-hoc line items, dispute flag + amount received, Excel/PDF export |
 | `/products` | Product table — status toggle, variant prices, ETA summary |
 | `/orders` | Order list — expandable line items |
 | `/analytics` | ShopifyQL — revenue/sessions/top products |
-| `/eta-manager` | Per-variant ETA + ETA note + material grams editor |
 | `/new-product` | Create product form |
 
 ## Design system
@@ -104,12 +103,32 @@ signal colors (pending/refunded/overdue) — don't neutralize those.
 Typography: Inter, headers uppercase + `tracking-widest`. Sidebar: 240px,
 active nav item = accent-colored left border + accent text.
 
+## Shared building blocks — use these, don't re-inline
+
+- **`src/components/ui.tsx`** — `Card`, `Panel`, `PageHeading`, `Loading`,
+  `ErrorNote`, `StatCard`, `Badge`, `FinancialBadge`, `FulfillmentBadge`,
+  `financialTone`/`fulfillmentTone`, `marginColor`, `inputStyle`.
+  Before this existed the card wrapper style appeared 34 times and the
+  status→colour mapping lived in 4 places and had already drifted.
+- **`src/lib/apiRoute.ts`** — wrap every route handler in `apiRoute()` and
+  throw `ApiError(msg, status)` for 4xx. Never hand-roll the
+  try/catch → JSON-500 block again.
+- **`src/lib/exportExcel.ts`** — `exportRowsToXlsx({ sheetName, filename,
+  columns, rows, headerRows?, totalRow?, wrapText? })` for any XLSX export;
+  `exportDateStamp()` for dated filenames.
+- **`src/lib/shopify.ts`** — order queries compose `ORDER_CORE_FIELDS` /
+  `ORDER_TOTAL_FIELDS`. Date filters come from `LAUNCH_DATE`,
+  `SINCE_LAUNCH`, `RECEIVABLES_FILTER` — never hardcode the launch date.
+- **Data hooks** — `useProducts()` (catalogue pages), `useQueue()`
+  (production/queue/dashboard alert/monthly P&L), `useReceivables()`.
+  Consume these rather than adding a fetch.
+
 ## Conventions
 
 - **Sortable tables**: use `src/hooks/useSortable.ts` +
   `src/components/SortableHeader.tsx`. Every data table in this app should
   be sortable — it's an established pattern, not optional.
-- **Per-variant editable fields** (ETA Manager, Catalogue): each row saves
+- **Per-variant editable fields** (Catalogue): each row saves
   independently via its own button/request, with `saving`/`saved` local
   state and a 2s auto-clear on the "SAVED" confirmation — follow this
   pattern for any new editable-row UI rather than a page-level save button.

@@ -1,5 +1,4 @@
 import { SignJWT, jwtVerify } from 'jose';
-import { cookies } from 'next/headers';
 import { getJwtSecret } from '@/lib/jwtSecret';
 
 export async function signToken(payload: object) {
@@ -18,9 +17,3 @@ export async function verifyToken(token: string) {
   }
 }
 
-export async function getSession() {
-  const cookieStore = cookies();
-  const token = cookieStore.get('session')?.value;
-  if (!token) return null;
-  return verifyToken(token);
-}

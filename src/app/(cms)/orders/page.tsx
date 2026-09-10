@@ -5,7 +5,8 @@ import { ChevronDown, ChevronRight, FileDown, Sheet } from 'lucide-react';
 import SortableHeader from '@/components/SortableHeader';
 import { useSortable } from '@/hooks/useSortable';
 import type { InvoiceData } from '@/components/InvoiceDocument';
-import { downloadWorkbook } from '@/lib/exportExcel';
+import { exportRowsToXlsx } from '@/lib/exportExcel';
+import { Loading } from '@/components/ui';
 
 interface LineItem { title: string; quantity: number; variant?: { title?: string; price: string } }
 interface Order {
@@ -108,39 +109,39 @@ export default function OrdersPage() {
   async function exportExcel() {
     setExportingXlsx(true);
     try {
-      const { Workbook } = await import('exceljs');
       const cutoff = Date.now() - periodDays * 24 * 60 * 60 * 1000;
       const filtered = orders
         .filter(o => new Date(o.createdAt).getTime() >= cutoff)
         .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
 
-      const wb = new Workbook();
-      const ws = wb.addWorksheet('Orders');
-      ws.columns = [
-        { header: 'Order No', key: 'orderNo', width: 14 },
-        { header: 'Date', key: 'date', width: 14 },
-        { header: 'Customer Name', key: 'customer', width: 24 },
-        { header: 'No of Items', key: 'items', width: 14 },
-        { header: 'Total Amount (PKR)', key: 'amount', width: 20 },
-      ];
-      ws.getRow(1).font = { bold: true };
-
       let totalItems = 0, totalAmount = 0;
-      filtered.forEach(o => {
+      const rows = filtered.map(o => {
         const items = o.lineItems?.edges?.reduce((s, e) => s + e.node.quantity, 0) || 0;
         const amount = Number(o.totalPriceSet?.shopMoney?.amount || 0);
-        const customer = o.customer ? `${o.customer.firstName} ${o.customer.lastName}`.trim() : 'Guest';
         totalItems += items;
         totalAmount += amount;
-        ws.addRow({ orderNo: o.name, date: formatDate(o.createdAt), customer, items, amount });
+        return {
+          orderNo: o.name,
+          date: formatDate(o.createdAt),
+          customer: o.customer ? `${o.customer.firstName} ${o.customer.lastName}`.trim() : 'Guest',
+          items,
+          amount,
+        };
       });
 
-      ws.addRow({});
-      const totalRow = ws.addRow({ orderNo: 'TOTAL', items: totalItems, amount: totalAmount });
-      totalRow.font = { bold: true };
-      ws.getColumn('amount').numFmt = '#,##0';
-
-      await downloadWorkbook(wb, `objexyz-orders-${periodLabel}.xlsx`);
+      await exportRowsToXlsx({
+        sheetName: 'Orders',
+        filename: `objexyz-orders-${periodLabel}.xlsx`,
+        columns: [
+          { header: 'Order No', key: 'orderNo', width: 14 },
+          { header: 'Date', key: 'date', width: 14 },
+          { header: 'Customer Name', key: 'customer', width: 24 },
+          { header: 'No of Items', key: 'items', width: 14 },
+          { header: 'Total Amount (PKR)', key: 'amount', width: 20, numFmt: '#,##0' },
+        ],
+        rows,
+        totalRow: { orderNo: 'TOTAL', items: totalItems, amount: totalAmount },
+      });
     } finally {
       setExportingXlsx(false);
     }
@@ -216,7 +217,7 @@ export default function OrdersPage() {
       </div>
 
       {loading ? (
-        <div className="text-xs tracking-widest" style={{ color: 'var(--muted-2)' }}>LOADING ORDER MANIFEST...</div>
+        <Loading label="LOADING ORDER MANIFEST..." />
       ) : (
         <div className="rounded-lg overflow-hidden" style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
           <table className="w-full text-xs">

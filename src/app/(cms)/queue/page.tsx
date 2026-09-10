@@ -4,7 +4,8 @@ import { formatDate, shipByDate, daysUntil } from '@/lib/utils';
 import { useQueue, STAGES, STAGE_LABELS, QueueItem, Stage } from '@/hooks/useQueue';
 import LocalDataWarning from '@/components/LocalDataWarning';
 import { ChevronLeft, ChevronRight, Package, Sheet } from 'lucide-react';
-import { downloadWorkbook } from '@/lib/exportExcel';
+import { exportRowsToXlsx, exportDateStamp } from '@/lib/exportExcel';
+import { Loading, ErrorNote } from '@/components/ui';
 
 function ShipBy({ item }: { item: QueueItem }) {
   const target = shipByDate(item.createdAt, item.eta);
@@ -102,33 +103,32 @@ export default function QueuePage() {
   async function exportExcel() {
     setExportingXlsx(true);
     try {
-      const { Workbook } = await import('exceljs');
-      const wb = new Workbook();
-      const ws = wb.addWorksheet('Shipping Queue');
-      ws.columns = STAGES.map(stage => ({ header: STAGE_LABELS[stage], key: stage, width: 38 }));
-      ws.getRow(1).font = { bold: true };
-
-      const countRow: Record<Stage, string> = {} as Record<Stage, string>;
-      STAGES.forEach(stage => {
-        countRow[stage] = `${byStage[stage].length} item${byStage[stage].length !== 1 ? 's' : ''}`;
-      });
-      const countExcelRow = ws.addRow(countRow);
-      countExcelRow.font = { bold: true, italic: true };
-
       const cellText = (item: QueueItem) =>
         `${item.orderName} · ${item.productTitle}${item.variantTitle ? ` — ${item.variantTitle}` : ''} ×${item.quantity} · ${item.customer}`;
 
+      const countRow: Record<string, string> = {};
+      STAGES.forEach(stage => {
+        const n = byStage[stage].length;
+        countRow[stage] = `${n} item${n !== 1 ? 's' : ''}`;
+      });
+
       const maxRows = Math.max(0, ...STAGES.map(s => byStage[s].length));
-      for (let i = 0; i < maxRows; i++) {
-        const row: Record<Stage, string> = {} as Record<Stage, string>;
+      const rows = Array.from({ length: maxRows }, (_, i) => {
+        const row: Record<string, string> = {};
         STAGES.forEach(stage => {
           row[stage] = byStage[stage][i] ? cellText(byStage[stage][i]) : '';
         });
-        ws.addRow(row);
-      }
-      ws.eachRow(row => { row.alignment = { wrapText: true, vertical: 'top' }; });
+        return row;
+      });
 
-      await downloadWorkbook(wb, `objexyz-shipping-queue-${new Date().toISOString().slice(0, 10)}.xlsx`);
+      await exportRowsToXlsx({
+        sheetName: 'Shipping Queue',
+        filename: `objexyz-shipping-queue-${exportDateStamp()}.xlsx`,
+        columns: STAGES.map(stage => ({ header: STAGE_LABELS[stage], key: stage, width: 38 })),
+        headerRows: [countRow],
+        rows,
+        wrapText: true,
+      });
     } finally {
       setExportingXlsx(false);
     }
@@ -151,11 +151,9 @@ export default function QueuePage() {
         </button>
       </div>
 
-      {loading && <div className="text-xs tracking-widest" style={{ color: 'var(--muted-2)' }}>LOADING QUEUE...</div>}
+      {loading && <Loading label="LOADING QUEUE..." />}
       {error && (
-        <div className="rounded p-4 text-xs" style={{ background: 'var(--danger-bg)', border: '1px solid var(--danger-border)', color: 'var(--danger)' }}>
-          {error}
-        </div>
+        <ErrorNote message={error} />
       )}
       {!loading && localWarning && <LocalDataWarning />}
 

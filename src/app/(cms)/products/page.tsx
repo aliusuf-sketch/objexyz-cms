@@ -5,6 +5,7 @@ import SortableHeader from '@/components/SortableHeader';
 import { useSortable } from '@/hooks/useSortable';
 import LocalDataWarning from '@/components/LocalDataWarning';
 import { useProducts, Product } from '@/hooks/useProducts';
+import { Loading } from '@/components/ui';
 
 interface ProductRow {
   id: string;
@@ -84,7 +85,7 @@ export default function ProductsPage() {
       </div>
 
       {loading ? (
-        <div className="text-xs tracking-widest" style={{ color: 'var(--muted-2)' }}>LOADING PRODUCT CATALOG...</div>
+        <Loading label="LOADING PRODUCT CATALOG..." />
       ) : (
         <>
           {localWarning && <LocalDataWarning />}

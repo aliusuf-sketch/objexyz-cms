@@ -4,37 +4,13 @@ import { formatPKR, formatDate } from '@/lib/utils';
 import { useReceivables } from '@/hooks/useReceivables';
 import { ReceivableOrderVM, orderReceivableTotal } from '@/lib/receivables';
 import LocalDataWarning from '@/components/LocalDataWarning';
-import { downloadWorkbook } from '@/lib/exportExcel';
+import { exportRowsToXlsx, exportDateStamp } from '@/lib/exportExcel';
 import {
   RefreshCw, Download, FileText, RotateCcw, X, Plus, Package, AlertTriangle,
 } from 'lucide-react';
-
-const inputStyle = { background: 'var(--bg)', border: '1px solid var(--input-border)', color: 'var(--text)' };
-
-function Badge({ text, tone }: { text: string; tone: 'accent' | 'warn' | 'danger' | 'neutral' }) {
-  const map = {
-    accent: { bg: 'var(--accent-bg)', color: 'var(--accent)' },
-    warn: { bg: 'var(--warn-bg)', color: 'var(--warn)' },
-    danger: { bg: 'var(--danger-bg)', color: 'var(--danger)' },
-    neutral: { bg: 'var(--neutral-bg)', color: 'var(--muted)' },
-  }[tone];
-  return (
-    <span className="px-2 py-0.5 rounded text-xs" style={{ background: map.bg, color: map.color }}>{text}</span>
-  );
-}
-
-function financialTone(status: string): 'accent' | 'warn' | 'danger' | 'neutral' {
-  if (status === 'PAID') return 'accent';
-  if (status === 'PENDING' || status === 'PARTIALLY_PAID') return 'warn';
-  if (status === 'REFUNDED' || status === 'PARTIALLY_REFUNDED') return 'danger';
-  return 'neutral';
-}
-function fulfillmentTone(status: string): 'accent' | 'warn' | 'danger' | 'neutral' {
-  if (status === 'FULFILLED') return 'accent';
-  if (status === 'IN_PROGRESS' || status === 'PARTIAL' || status === 'PARTIALLY_FULFILLED') return 'warn';
-  if (status === 'ON_HOLD') return 'danger';
-  return 'neutral';
-}
+import {
+  Card, PageHeading, Loading, ErrorNote, Badge, FinancialBadge, FulfillmentBadge, inputStyle,
+} from '@/components/ui';
 
 function AddItemRow({ onAdd }: { onAdd: (title: string, price: number) => void }) {
   const [title, setTitle] = useState('');
@@ -84,7 +60,7 @@ function OrderCard({
   const itemsLocked = order.locked && !order.disputed;
 
   return (
-    <div className="rounded-lg overflow-hidden" style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
+    <Card className="overflow-hidden">
       {/* Header */}
       <div className="px-4 py-3 border-b flex items-center justify-between flex-wrap gap-2" style={{ borderColor: 'var(--border)', background: 'var(--surface-2)' }}>
         <div className="flex items-center gap-3 flex-wrap">
@@ -93,8 +69,8 @@ function OrderCard({
           <span className="text-xs" style={{ color: 'var(--muted)' }}>{order.customer}</span>
         </div>
         <div className="flex items-center gap-1.5 flex-wrap">
-          <Badge text={order.financialStatus} tone={financialTone(order.financialStatus)} />
-          <Badge text={order.fulfillmentStatus} tone={fulfillmentTone(order.fulfillmentStatus)} />
+          <FinancialBadge status={order.financialStatus} />
+          <FulfillmentBadge status={order.fulfillmentStatus} />
           {order.shippedWithoutPayment && <Badge text="SHIPPED WITHOUT PAYMENT" tone="danger" />}
           {order.disputed && <Badge text="DISPUTED" tone="danger" />}
           <button onClick={onReset} title="Reset this order" className="p-1 rounded" style={{ color: 'var(--muted-2)' }}>
@@ -208,7 +184,7 @@ function OrderCard({
           {formatPKR(contribution)}
         </span>
       </div>
-    </div>
+    </Card>
   );
 }
 
@@ -242,25 +218,20 @@ export default function ReceivablesPage() {
   async function exportExcel() {
     setExportingXlsx(true);
     try {
-      const { Workbook } = await import('exceljs');
-      const wb = new Workbook();
-      const ws = wb.addWorksheet('Pending Receivables');
-      ws.columns = [
-        { header: 'Order', key: 'order', width: 12 },
-        { header: 'Date', key: 'date', width: 14 },
-        { header: 'Customer', key: 'customer', width: 24 },
-        { header: 'Item', key: 'item', width: 34 },
-        { header: 'Amount (PKR)', key: 'amount', width: 16 },
-      ];
-      ws.getRow(1).font = { bold: true };
       const rows = exportRows();
-      rows.forEach(r => ws.addRow(r));
-      ws.addRow({});
-      const totalRow = ws.addRow({ order: 'TOTAL', amount: rows.reduce((s, r) => s + r.amount, 0) });
-      totalRow.font = { bold: true };
-      ws.getColumn('amount').numFmt = '#,##0';
-
-      await downloadWorkbook(wb, `OBJEXYZ_Receivables_${new Date().toISOString().slice(0, 10)}.xlsx`);
+      await exportRowsToXlsx({
+        sheetName: 'Pending Receivables',
+        filename: `OBJEXYZ_Receivables_${exportDateStamp()}.xlsx`,
+        columns: [
+          { header: 'Order', key: 'order', width: 12 },
+          { header: 'Date', key: 'date', width: 14 },
+          { header: 'Customer', key: 'customer', width: 24 },
+          { header: 'Item', key: 'item', width: 34 },
+          { header: 'Amount (PKR)', key: 'amount', width: 16, numFmt: '#,##0' },
+        ],
+        rows,
+        totalRow: { order: 'TOTAL', amount: rows.reduce((s, r) => s + r.amount, 0) },
+      });
     } finally {
       setExportingXlsx(false);
     }
@@ -278,7 +249,7 @@ export default function ReceivablesPage() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `OBJEXYZ_Receivables_${new Date().toISOString().slice(0, 10)}.pdf`;
+      a.download = `OBJEXYZ_Receivables_${exportDateStamp()}.pdf`;
       a.click();
       URL.revokeObjectURL(url);
     } finally {
@@ -292,11 +263,10 @@ export default function ReceivablesPage() {
 
   return (
     <div className="flex flex-col" style={{ minHeight: 'calc(100vh - 4rem)' }}>
-      <div className="mb-6 flex items-end justify-between flex-wrap gap-4">
-        <div>
-          <h1 className="text-xl font-bold tracking-widest uppercase txt-heading">PENDING RECEIVABLES</h1>
-          <p className="text-xs mt-1 tracking-widest" style={{ color: 'var(--muted-2)' }}>UNPAID · PARTIAL · UNFULFILLED · DISPUTED — SINCE 2026-05-09</p>
-        </div>
+      <PageHeading
+        title="PENDING RECEIVABLES"
+        subtitle="UNPAID · PARTIAL · UNFULFILLED · DISPUTED — SINCE 2026-05-09"
+      >
         <button
           onClick={sync}
           disabled={syncing}
@@ -305,11 +275,11 @@ export default function ReceivablesPage() {
         >
           <RefreshCw size={12} className={syncing ? 'animate-spin' : ''} /> {syncing ? 'SYNCING...' : 'SYNC FROM SHOPIFY'}
         </button>
-      </div>
+      </PageHeading>
 
-      {loading && <div className="text-xs tracking-widest" style={{ color: 'var(--muted-2)' }}>LOADING RECEIVABLES...</div>}
+      {loading && <Loading label="LOADING RECEIVABLES..." />}
       {error && (
-        <div className="rounded p-4 text-xs" style={{ background: 'var(--danger-bg)', border: '1px solid var(--danger-border)', color: 'var(--danger)' }}>{error}</div>
+        <ErrorNote message={error} />
       )}
       {!loading && localWarning && <LocalDataWarning />}
 
