@@ -84,6 +84,11 @@ export const RECEIVABLES_FILTER =
   'OR fulfillment_status:unfulfilled OR fulfillment_status:partial OR fulfillment_status:on_hold) ' +
   'AND -financial_status:voided AND -financial_status:refunded';
 
+// Shippable: anything not already fully fulfilled, excluding dead orders.
+export const SHIPPABLE_FILTER =
+  `created_at:>=${LAUNCH_DATE} AND -financial_status:voided ` +
+  'AND -financial_status:refunded AND -fulfillment_status:fulfilled';
+
 // ── Shared field fragments ─────────────────────────────────────────────
 // Every order query needs the same identity + status core; the differences
 // are only in which money fields and line-item detail each page requires.
@@ -254,6 +259,47 @@ export const RECEIVABLES_BY_ID_QUERY = `
     nodes(ids: $ids) {
       ... on Order {
         ${RECEIVABLE_ORDER_FIELDS}
+      }
+    }
+  }
+`;
+
+// ── Shipping Orders ────────────────────────────────────────────────────
+// Candidates for a dispatch, with the shipping address and outstanding
+// balance needed by the box labels and the manager copy of the doc.
+
+export const SHIPPING_QUERY = `
+  query ShippingCandidates($ordersQuery: String!, $cursor: String) {
+    orders(first: 50, after: $cursor, query: $ordersQuery) {
+      pageInfo { hasNextPage endCursor }
+      edges {
+        node {
+          ${ORDER_CORE_FIELDS}
+          cancelledAt
+          customer { firstName lastName }
+          totalOutstandingSet { shopMoney { amount } }
+          shippingAddress {
+            name
+            address1
+            address2
+            city
+            province
+            zip
+            country
+            phone
+          }
+          lineItems(first: 50) {
+            edges {
+              node {
+                id
+                title
+                quantity
+                originalUnitPriceSet { shopMoney { amount } }
+                variant { title }
+              }
+            }
+          }
+        }
       }
     }
   }
