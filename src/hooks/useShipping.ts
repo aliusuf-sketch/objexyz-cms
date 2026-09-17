@@ -1,6 +1,6 @@
 'use client';
-import { useCallback, useEffect, useState } from 'react';
-import { Shipment, ShipmentLine, ShippableOrder } from '@/lib/shipments';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { Shipment, ShipmentLine, ShippableOrder, ShipmentLineOutcome, DEFAULT_OUTCOME } from '@/lib/shipments';
 
 /**
  * Shipping module data: the pool of orders that can still be shipped
@@ -11,6 +11,7 @@ export function useShipping() {
   const [shipments, setShipments] = useState<Shipment[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const outcomeTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -51,5 +52,35 @@ export function useShipping() {
       .catch(() => { /* optimistic; a failure just means it returns on refresh */ });
   }, []);
 
-  return { orders, shipments, loading, error, reload: load, createShipment, removeShipment };
+  /**
+   * Record delivery/collection for one order in a shipment. Optimistic,
+   * with text/number edits debounced so typing an amount doesn't fire a
+   * request per keystroke — same pattern as Receivables.
+   */
+  const setOutcome = useCallback((
+    shipmentId: string,
+    orderId: string,
+    patch: Partial<ShipmentLineOutcome>,
+    immediate = true,
+  ) => {
+    setShipments(prev => prev.map(s => s.id !== shipmentId ? s : {
+      ...s,
+      lines: s.lines.map(l => l.orderId !== orderId
+        ? l
+        : { ...l, outcome: { ...DEFAULT_OUTCOME, ...(l.outcome || {}), ...patch } }),
+    }));
+
+    const key = `${shipmentId}:${orderId}`;
+    const fire = () => fetch('/api/local/shipment', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: shipmentId, orderId, outcome: patch }),
+    }).catch(() => { /* optimistic; a failure just won't survive a refresh */ });
+
+    if (immediate) { fire(); return; }
+    if (outcomeTimers.current[key]) clearTimeout(outcomeTimers.current[key]);
+    outcomeTimers.current[key] = setTimeout(fire, 500);
+  }, []);
+
+  return { orders, shipments, loading, error, reload: load, createShipment, removeShipment, setOutcome };
 }

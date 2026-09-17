@@ -3,13 +3,14 @@ import { useMemo, useState } from 'react';
 import { formatPKR, formatDate } from '@/lib/utils';
 import { useShipping } from '@/hooks/useShipping';
 import {
-  Shipment, ShipmentLine, ShippableOrder, resolveShipment, shipmentTotals, isAddressIncomplete,
+  Shipment, ShipmentLine, ShippableOrder, ShipmentLineOutcome, ResolvedShipmentOrder,
+  resolveShipment, shipmentProgress, isAddressIncomplete,
 } from '@/lib/shipments';
 import {
   Card, PageHeading, Loading, ErrorNote, Badge, FinancialBadge, FulfillmentBadge, inputStyle,
 } from '@/components/ui';
 import {
-  Plus, FileText, Tag, Trash2, X, AlertTriangle, PackageCheck,
+  Plus, FileText, Tag, Trash2, X, AlertTriangle, PackageCheck, ChevronDown, ChevronRight,
 } from 'lucide-react';
 
 type SelectionMap = Record<string, Set<string>>; // orderId -> selected line item keys
@@ -77,9 +78,10 @@ function ShipmentBuilder({
   }, [orders, selection]);
 
   const visible = orders.filter(o =>
-    !search ||
+    o.shippable &&
+    (!search ||
     o.name.toLowerCase().includes(search.toLowerCase()) ||
-    o.customer.toLowerCase().includes(search.toLowerCase())
+    o.customer.toLowerCase().includes(search.toLowerCase()))
   );
 
   async function save() {
@@ -186,18 +188,124 @@ function ShipmentBuilder({
   );
 }
 
+// ── Per-order delivery / collection feedback ──────────────────────────
+
+function OutcomeRow({
+  resolved, onChange,
+}: {
+  resolved: ResolvedShipmentOrder;
+  onChange: (patch: Partial<ShipmentLineOutcome>, immediate?: boolean) => void;
+}) {
+  const { order, unitCount, outcome } = resolved;
+  const unitsDelivered = outcome.unitsDelivered ?? unitCount;
+  const shortUnits = outcome.delivered && unitsDelivered < unitCount;
+  const shortCash = outcome.collected && outcome.amountCollected < order.outstanding;
+
+  return (
+    <div className="px-4 py-2.5 border-t" style={{ borderColor: 'var(--border-subtle)' }}>
+      <div className="flex items-center gap-3 flex-wrap">
+        <span className="font-mono text-xs" style={{ color: 'var(--accent)' }}>{order.name}</span>
+        <span className="text-xs" style={{ color: 'var(--text)' }}>
+          {order.address?.name || order.customer}
+        </span>
+        <span className="text-xs" style={{ color: 'var(--muted-2)' }}>{unitCount}u shipped</span>
+
+        {/* Delivered */}
+        <label className="flex items-center gap-1.5 text-xs ml-auto" style={{ color: 'var(--muted)' }}>
+          <input
+            type="checkbox"
+            checked={outcome.delivered}
+            onChange={e => onChange({
+              delivered: e.target.checked,
+              // Default to "all of it arrived" — the common case.
+              ...(e.target.checked && outcome.unitsDelivered === undefined
+                ? { unitsDelivered: unitCount } : {}),
+            })}
+          />
+          DELIVERED
+        </label>
+        {outcome.delivered && (
+          <div className="flex items-center gap-1 text-xs" style={{ color: 'var(--muted-2)' }}>
+            <input
+              type="number" min={0} max={unitCount}
+              value={unitsDelivered}
+              onChange={e => onChange({ unitsDelivered: Number(e.target.value) || 0 }, false)}
+              className="w-14 px-2 py-1 rounded text-xs outline-none" style={inputStyle}
+            />
+            <span>of {unitCount} models</span>
+          </div>
+        )}
+
+        {/* Collected */}
+        <label className="flex items-center gap-1.5 text-xs" style={{ color: 'var(--muted)' }}>
+          <input
+            type="checkbox"
+            checked={outcome.collected}
+            onChange={e => onChange({
+              collected: e.target.checked,
+              // Default to the full outstanding balance on first tick.
+              ...(e.target.checked && !outcome.amountCollected
+                ? { amountCollected: order.outstanding } : {}),
+            })}
+          />
+          COLLECTED
+        </label>
+        {outcome.collected && (
+          <div className="flex items-center gap-1 text-xs" style={{ color: 'var(--muted-2)' }}>
+            <input
+              type="number" min={0}
+              value={outcome.amountCollected || ''}
+              onChange={e => onChange({ amountCollected: Number(e.target.value) || 0 }, false)}
+              className="w-24 px-2 py-1 rounded text-xs outline-none" style={inputStyle}
+            />
+            <span>of {formatPKR(order.outstanding)}</span>
+          </div>
+        )}
+      </div>
+
+      {(shortUnits || shortCash) && (
+        <div className="flex items-center gap-3 flex-wrap mt-1.5 pl-1">
+          {shortUnits && (
+            <span className="flex items-center gap-1 text-xs" style={{ color: 'var(--warn)' }}>
+              <AlertTriangle size={10} /> {unitCount - unitsDelivered} not delivered
+            </span>
+          )}
+          {shortCash && (
+            <span className="flex items-center gap-1 text-xs" style={{ color: 'var(--warn)' }}>
+              <AlertTriangle size={10} /> short by {formatPKR(order.outstanding - outcome.amountCollected)}
+            </span>
+          )}
+        </div>
+      )}
+
+      {(outcome.delivered || outcome.collected) && (
+        <input
+          type="text"
+          value={outcome.note || ''}
+          onChange={e => onChange({ note: e.target.value }, false)}
+          placeholder="Feedback / issue note (optional)"
+          className="mt-1.5 px-2 py-1 rounded text-xs outline-none w-full"
+          style={inputStyle}
+        />
+      )}
+    </div>
+  );
+}
+
 // ── Saved shipment row ────────────────────────────────────────────────
 
 function ShipmentRow({
-  shipment, orders, onDelete,
+  shipment, orders, onDelete, onOutcome,
 }: {
   shipment: Shipment;
   orders: ShippableOrder[];
   onDelete: () => void;
+  onOutcome: (orderId: string, patch: Partial<ShipmentLineOutcome>, immediate?: boolean) => void;
 }) {
   const [busy, setBusy] = useState('');
+  const [open, setOpen] = useState(false);
   const resolved = useMemo(() => resolveShipment(shipment, orders), [shipment, orders]);
-  const totals = shipmentTotals(resolved);
+  const p = useMemo(() => shipmentProgress(resolved), [resolved]);
   const stale = resolved.length < shipment.lines.length;
 
   async function makeDoc(kind: 'manager' | 'courier' | 'labels') {
@@ -230,28 +338,35 @@ function ShipmentRow({
     }
   }
 
-  const btn = {
-    border: '1px solid var(--accent)',
-    color: 'var(--accent)',
-  };
+  const btn = { border: '1px solid var(--accent)', color: 'var(--accent)' };
 
   return (
     <Card>
       <div className="px-4 py-3 flex items-center justify-between flex-wrap gap-3">
         <div className="flex items-center gap-3 flex-wrap">
+          <button onClick={() => setOpen(o => !o)} className="p-0.5" style={{ color: 'var(--muted-2)' }}>
+            {open ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
+          </button>
           <span className="font-mono text-sm font-bold" style={{ color: 'var(--accent)' }}>{shipment.reference}</span>
           <span className="text-xs" style={{ color: 'var(--muted-2)' }}>{formatDate(shipment.createdAt)}</span>
           <span className="text-xs" style={{ color: 'var(--muted)' }}>
-            {totals.orderCount} order{totals.orderCount !== 1 ? 's' : ''} · {totals.unitCount} unit{totals.unitCount !== 1 ? 's' : ''}
+            {p.orderCount} order{p.orderCount !== 1 ? 's' : ''} · {p.unitCount} unit{p.unitCount !== 1 ? 's' : ''}
           </span>
-          {totals.toCollect > 0 && (
-            <span className="text-xs font-mono" style={{ color: 'var(--warn)' }}>
-              collect {formatPKR(totals.toCollect)}
+
+          {p.complete
+            ? <Badge text="COMPLETE" tone="accent" />
+            : p.started
+              ? <Badge text={`${p.deliveredOrders}/${p.orderCount} DELIVERED`} tone="warn" />
+              : <Badge text="DISPATCHED" tone="neutral" />}
+
+          {p.toCollect > 0 && (
+            <span className="text-xs font-mono" style={{ color: p.outstandingAfter > 0 ? 'var(--warn)' : 'var(--accent)' }}>
+              collected {formatPKR(p.amountCollected)} / {formatPKR(p.toCollect)}
             </span>
           )}
           {stale && (
             <span className="flex items-center gap-1 text-xs" style={{ color: 'var(--warn)' }}>
-              <AlertTriangle size={11} /> some orders no longer shippable
+              <AlertTriangle size={11} /> some orders no longer resolvable
             </span>
           )}
         </div>
@@ -280,14 +395,40 @@ function ShipmentRow({
         <div className="px-4 pb-3 text-xs" style={{ color: 'var(--muted-2)' }}>{shipment.note}</div>
       )}
 
-      <div className="px-4 pb-3 flex flex-wrap gap-x-4 gap-y-1">
-        {resolved.map(({ order, unitCount }) => (
-          <span key={order.id} className="text-xs" style={{ color: 'var(--muted-2)' }}>
-            <span className="font-mono" style={{ color: 'var(--muted)' }}>{order.name}</span>
-            {' '}{order.address?.name || order.customer} · {unitCount}u
-          </span>
-        ))}
-      </div>
+      {open ? (
+        <>
+          {resolved.map(r => (
+            <OutcomeRow
+              key={r.order.id}
+              resolved={r}
+              onChange={(patch, immediate) => onOutcome(r.order.id, patch, immediate)}
+            />
+          ))}
+          <div className="px-4 py-2.5 border-t flex items-center gap-4 flex-wrap text-xs"
+               style={{ borderColor: 'var(--border)', background: 'var(--surface-2)', color: 'var(--muted-2)' }}>
+            <span>{p.unitsDelivered} of {p.unitCount} models delivered</span>
+            <span>{p.collectedOrders} of {p.orderCount} orders collected</span>
+            <span className="font-mono" style={{ color: 'var(--text)' }}>
+              {formatPKR(p.amountCollected)} collected
+            </span>
+            {p.outstandingAfter > 0 && (
+              <span className="font-mono" style={{ color: 'var(--warn)' }}>
+                {formatPKR(p.outstandingAfter)} still outstanding
+              </span>
+            )}
+          </div>
+        </>
+      ) : (
+        <div className="px-4 pb-3 flex flex-wrap gap-x-4 gap-y-1">
+          {resolved.map(({ order, unitCount, outcome }) => (
+            <span key={order.id} className="text-xs" style={{ color: 'var(--muted-2)' }}>
+              <span className="font-mono" style={{ color: 'var(--muted)' }}>{order.name}</span>
+              {' '}{order.address?.name || order.customer} · {unitCount}u
+              {outcome.delivered && <span style={{ color: 'var(--accent)' }}> ✓</span>}
+            </span>
+          ))}
+        </div>
+      )}
     </Card>
   );
 }
@@ -295,7 +436,7 @@ function ShipmentRow({
 // ── Page ──────────────────────────────────────────────────────────────
 
 export default function ShippingPage() {
-  const { orders, shipments, loading, error, createShipment, removeShipment } = useShipping();
+  const { orders, shipments, loading, error, createShipment, removeShipment, setOutcome } = useShipping();
   const [building, setBuilding] = useState(false);
 
   return (
@@ -338,6 +479,7 @@ export default function ShippingPage() {
                 shipment={s}
                 orders={orders}
                 onDelete={() => removeShipment(s.id)}
+                onOutcome={(orderId, patch, immediate) => setOutcome(s.id, orderId, patch, immediate)}
               />
             ))}
             {shipments.length === 0 && !building && (

@@ -304,3 +304,40 @@ export const SHIPPING_QUERY = `
     }
   }
 `;
+
+// Orders referenced by a saved shipment must stay resolvable even after
+// they're marked fulfilled in Shopify (which drops them from
+// SHIPPABLE_FILTER) — otherwise every past shipment loses its contents.
+export const SHIPPING_BY_ID_QUERY = `
+  query ShippingOrdersById($ids: [ID!]!) {
+    nodes(ids: $ids) {
+      ... on Order {
+        ${ORDER_CORE_FIELDS}
+        cancelledAt
+        customer { firstName lastName }
+        totalOutstandingSet { shopMoney { amount } }
+        shippingAddress {
+          name
+          address1
+          address2
+          city
+          province
+          zip
+          country
+          phone
+        }
+        lineItems(first: 50) {
+          edges {
+            node {
+              id
+              title
+              quantity
+              originalUnitPriceSet { shopMoney { amount } }
+              variant { title }
+            }
+          }
+        }
+      }
+    }
+  }
+`;

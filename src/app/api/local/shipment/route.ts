@@ -1,4 +1,4 @@
-import { getAllShipments, saveShipment, deleteShipment } from '@/lib/db';
+import { getAllShipments, saveShipment, deleteShipment, updateShipmentOutcome } from '@/lib/db';
 import { Shipment, nextShipmentReference } from '@/lib/shipments';
 import { apiRoute, ApiError } from '@/lib/apiRoute';
 
@@ -8,10 +8,32 @@ export const GET = apiRoute(async () => {
   return { shipments };
 });
 
-// Create or update a shipment.
-// Body: { id?, note?, lines: [{ orderId, lineItemKeys }] }
+// Two modes on the same resource:
+//   { id, orderId, outcome } -> record delivery/collection for one order
+//   { id?, note?, lines }    -> create or replace a shipment
 export const POST = apiRoute(async (request) => {
   const body = await request.json();
+
+  if (body.id && body.orderId && body.outcome) {
+    const o = body.outcome;
+    const patch: Record<string, unknown> = {};
+    if (o.delivered !== undefined) {
+      patch.delivered = Boolean(o.delivered);
+      patch.deliveredAt = o.delivered ? new Date().toISOString() : undefined;
+    }
+    if (o.collected !== undefined) {
+      patch.collected = Boolean(o.collected);
+      patch.collectedAt = o.collected ? new Date().toISOString() : undefined;
+    }
+    if (o.unitsDelivered !== undefined) patch.unitsDelivered = Number(o.unitsDelivered) || 0;
+    if (o.amountCollected !== undefined) patch.amountCollected = Number(o.amountCollected) || 0;
+    if (o.note !== undefined) patch.note = String(o.note);
+
+    const shipment = await updateShipmentOutcome(body.id, body.orderId, patch);
+    if (!shipment) throw new ApiError('Shipment not found', 404);
+    return { shipment };
+  }
+
   const lines = body.lines;
   if (!Array.isArray(lines) || lines.length === 0) {
     throw new ApiError('At least one order with selected items is required');

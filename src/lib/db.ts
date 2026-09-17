@@ -1,7 +1,7 @@
 import { Redis } from '@upstash/redis';
 import { CostRates, DEFAULT_COST_RATES } from '@/lib/costCalc';
 import { ReceivableOverride, ReceivableOverrideMap, DEFAULT_RECEIVABLE_OVERRIDE } from '@/lib/receivables';
-import { Shipment, ShipmentMap } from '@/lib/shipments';
+import { Shipment, ShipmentMap, ShipmentLineOutcome, DEFAULT_OUTCOME } from '@/lib/shipments';
 
 // CMS-owned data store (Upstash Redis via REST). Holds everything that does
 // NOT need to live in Shopify: per-variant ETA/material/dimensions/cost
@@ -121,4 +121,23 @@ export async function deleteShipment(id: string): Promise<ShipmentMap> {
   delete all[id];
   await redis.set(SHIPMENTS_KEY, all);
   return all;
+}
+
+/** Record what actually happened for one order inside a shipment. */
+export async function updateShipmentOutcome(
+  shipmentId: string,
+  orderId: string,
+  patch: Partial<ShipmentLineOutcome>
+): Promise<Shipment | null> {
+  const all = await getAllShipments();
+  const shipment = all[shipmentId];
+  if (!shipment) return null;
+  shipment.lines = shipment.lines.map(l =>
+    l.orderId === orderId
+      ? { ...l, outcome: { ...DEFAULT_OUTCOME, ...(l.outcome || {}), ...patch } }
+      : l
+  );
+  all[shipmentId] = shipment;
+  await redis.set(SHIPMENTS_KEY, all);
+  return shipment;
 }

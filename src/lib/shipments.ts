@@ -7,7 +7,32 @@
 export interface ShipmentLine {
   orderId: string;          // gid://shopify/Order/…
   lineItemKeys: string[];   // gid://shopify/LineItem/… actually being shipped
+  outcome?: ShipmentLineOutcome;
 }
+
+/**
+ * What actually happened after dispatch, recorded by the manager per
+ * order. Deliberately separate from Shopify's own fulfillment/financial
+ * status: the courier handing over 2 of 3 models, or collecting less cash
+ * than invoiced, is a real-world fact Shopify won't know about unless
+ * someone edits the order there.
+ */
+export interface ShipmentLineOutcome {
+  delivered: boolean;
+  deliveredAt?: string;
+  /** Models actually handed over — may be fewer than shipped. */
+  unitsDelivered?: number;
+  collected: boolean;
+  collectedAt?: string;
+  amountCollected: number;
+  note?: string;
+}
+
+export const DEFAULT_OUTCOME: ShipmentLineOutcome = {
+  delivered: false,
+  collected: false,
+  amountCollected: 0,
+};
 
 export interface Shipment {
   id: string;
@@ -60,6 +85,12 @@ export interface ShippableOrder {
   outstanding: number;
   address: ShippingAddress | null;
   items: ShippableLineItem[];
+  /**
+   * False for orders pulled in only because a saved shipment references
+   * them (already fulfilled in Shopify). They must stay resolvable for
+   * past shipments, but must not be offered as new dispatch candidates.
+   */
+  shippable: boolean;
 }
 
 // ── Address helpers ───────────────────────────────────────────────────
@@ -95,6 +126,7 @@ export interface ResolvedShipmentOrder {
   items: ShippableLineItem[];
   itemsTotal: number;
   unitCount: number;
+  outcome: ShipmentLineOutcome;
 }
 
 /**
@@ -121,6 +153,7 @@ export function resolveShipment(
       items,
       itemsTotal: items.reduce((s, i) => s + i.price * i.quantity, 0),
       unitCount: items.reduce((s, i) => s + i.quantity, 0),
+      outcome: { ...DEFAULT_OUTCOME, ...(line.outcome || {}) },
     });
   }
   return resolved;
@@ -132,5 +165,31 @@ export function shipmentTotals(resolved: ResolvedShipmentOrder[]) {
     unitCount: resolved.reduce((s, r) => s + r.unitCount, 0),
     itemsValue: resolved.reduce((s, r) => s + r.itemsTotal, 0),
     toCollect: resolved.reduce((s, r) => s + r.order.outstanding, 0),
+  };
+}
+
+/**
+ * Post-dispatch progress: how much of what went out has actually landed
+ * and been paid for. Units delivered falls back to the shipped count when
+ * an order is ticked delivered without an explicit figure.
+ */
+export function shipmentProgress(resolved: ResolvedShipmentOrder[]) {
+  const totals = shipmentTotals(resolved);
+  const deliveredOrders = resolved.filter(r => r.outcome.delivered).length;
+  const collectedOrders = resolved.filter(r => r.outcome.collected).length;
+  const unitsDelivered = resolved.reduce(
+    (s, r) => s + (r.outcome.delivered ? (r.outcome.unitsDelivered ?? r.unitCount) : 0), 0
+  );
+  const amountCollected = resolved.reduce((s, r) => s + (r.outcome.amountCollected || 0), 0);
+
+  return {
+    ...totals,
+    deliveredOrders,
+    collectedOrders,
+    unitsDelivered,
+    amountCollected,
+    outstandingAfter: Math.max(0, totals.toCollect - amountCollected),
+    complete: resolved.length > 0 && resolved.every(r => r.outcome.delivered && r.outcome.collected),
+    started: resolved.some(r => r.outcome.delivered || r.outcome.collected),
   };
 }
